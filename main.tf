@@ -162,3 +162,133 @@ resource "aws_iam_role_policy_attachment" "lambda_policy_attachment" {
   role       = aws_iam_role.lambda_role.name
   policy_arn = aws_iam_policy.lambda_policy.arn
 }
+
+# Create a dummy zip file for Lambda function code
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  output_path = "${path.module}/get-upload-url.zip"
+  source {
+    content = <<EOF
+exports.handler = async (event) => {
+    console.log('Event:', JSON.stringify(event, null, 2));
+    
+    const response = {
+        statusCode: 200,
+        headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+        },
+        body: JSON.stringify({
+            message: 'Hello from get-upload-url Lambda!',
+            timestamp: new Date().toISOString()
+        })
+    };
+    
+    return response;
+};
+EOF
+    filename = "index.js"
+  }
+}
+
+# Lambda function
+resource "aws_lambda_function" "get_upload_url" {
+  filename         = data.archive_file.lambda_zip.output_path
+  function_name    = "${var.project_name}-get-upload-url"
+  role            = aws_iam_role.lambda_role.arn
+  handler         = "index.handler"
+  runtime         = "nodejs18.x"
+  timeout         = 30
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+
+  tags = {
+    Name    = "${var.project_name}-get-upload-url"
+    Project = var.project_name
+  }
+}
+
+# API Gateway REST API
+resource "aws_api_gateway_rest_api" "main" {
+  name        = "${var.project_name}-api"
+  description = "API Gateway for ${var.project_name}"
+
+  tags = {
+    Name    = "${var.project_name}-api"
+    Project = var.project_name
+  }
+}
+
+# API Gateway Resource
+resource "aws_api_gateway_resource" "get_upload_url" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_rest_api.main.root_resource_id
+  path_part   = "get-upload-url"
+}
+
+# API Gateway Method
+resource "aws_api_gateway_method" "get_upload_url" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.get_upload_url.id
+  http_method   = "GET"
+  authorization = "NONE"
+}
+
+# API Gateway Integration
+resource "aws_api_gateway_integration" "get_upload_url" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.get_upload_url.id
+  http_method = aws_api_gateway_method.get_upload_url.http_method
+
+  integration_http_method = "POST"
+  type                   = "AWS_PROXY"
+  uri                    = aws_lambda_function.get_upload_url.invoke_arn
+}
+
+# Lambda permission for API Gateway
+resource "aws_lambda_permission" "api_gateway" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.get_upload_url.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
+
+# API Gateway Deployment
+resource "aws_api_gateway_deployment" "main" {
+  depends_on = [
+    aws_api_gateway_method.get_upload_url,
+    aws_api_gateway_integration.get_upload_url,
+  ]
+
+  rest_api_id = aws_api_gateway_rest_api.main.id
+
+  triggers = {
+    redeployment = sha1(jsonencode([
+      aws_api_gateway_resource.get_upload_url.id,
+      aws_api_gateway_method.get_upload_url.id,
+      aws_api_gateway_integration.get_upload_url.id,
+    ]))
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# API Gateway Stage
+resource "aws_api_gateway_stage" "prod" {
+  deployment_id = aws_api_gateway_deployment.main.id
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  stage_name    = "prod"
+
+  tags = {
+    Name    = "${var.project_name}-api-stage"
+    Project = var.project_name
+  }
+}
+
+# Output the API Gateway URL
+output "api_gateway_url" {
+  description = "URL of the API Gateway"
+  value       = "${aws_api_gateway_stage.prod.invoke_url}/get-upload-url"
+}
