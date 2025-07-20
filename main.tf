@@ -101,6 +101,19 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "processed" {
   }
 }
 
+# CORS configuration for uploads bucket
+resource "aws_s3_bucket_cors_configuration" "uploads_cors" {
+  bucket = aws_s3_bucket.uploads.id
+
+  cors_rule {
+    allowed_headers = ["*"] # Allows any headers to be sent
+    allowed_methods = ["PUT", "POST", "GET"] # CRITICAL: We must allow PUT
+    allowed_origins = ["http://localhost:3000"] # Tells S3 that your local app is a trusted source
+    expose_headers  = ["ETag"] # Allows the browser to read the ETag header from the response
+    max_age_seconds = 3000 # How long the browser can cache this "permission slip"
+  }
+}
+
 # IAM role for Lambda function
 resource "aws_iam_role" "lambda_role" {
   name = "${var.project_name}-lambda-role"
