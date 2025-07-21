@@ -405,3 +405,8 @@ output "cloudfront_url" {
   description = "The URL for the CloudFront distribution"
   value       = "https://${aws_cloudfront_distribution.frontend_distribution.domain_name}"
 }
+
+output "cloudfront_distribution_id" {
+  description = "The ID of the CloudFront distribution"
+  value       = aws_cloudfront_distribution.frontend_distribution.id
+}

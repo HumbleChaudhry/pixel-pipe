@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -11,82 +11,6 @@ export default function Home() {
     type: 'success' | 'error' | null;
     message: string;
   }>({ type: null, message: '' });
-
-  // Global drag detection
-  useEffect(() => {
-    let dragCounter = 0;
-
-    const handleDragEnter = (e: DragEvent) => {
-      e.preventDefault();
-      dragCounter++;
-      if (e.dataTransfer?.types.includes('Files')) {
-        setShowDragMode(true);
-      }
-    };
-
-    const handleDragLeave = (e: DragEvent) => {
-      e.preventDefault();
-      dragCounter--;
-      if (dragCounter === 0) {
-        setShowDragMode(false);
-        setIsDragOver(false);
-      }
-    };
-
-    const handleDragOver = (e: DragEvent) => {
-      e.preventDefault();
-    };
-
-    const handleDrop = (e: DragEvent) => {
-      e.preventDefault();
-      dragCounter = 0;
-      setShowDragMode(false);
-      setIsDragOver(false);
-
-      const files = e.dataTransfer?.files;
-      if (files && files.length > 0) {
-        const file = files[0];
-        processFile(file);
-      }
-    };
-
-    document.addEventListener('dragenter', handleDragEnter);
-    document.addEventListener('dragleave', handleDragLeave);
-    document.addEventListener('dragover', handleDragOver);
-    document.addEventListener('drop', handleDrop);
-
-    return () => {
-      document.removeEventListener('dragenter', handleDragEnter);
-      document.removeEventListener('dragleave', handleDragLeave);
-      document.removeEventListener('dragover', handleDragOver);
-      document.removeEventListener('drop', handleDrop);
-    };
-  }, []);
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      processFile(file);
-    }
-  };
-
-  const processFile = (file: File) => {
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setUploadStatus({
-        type: 'error',
-        message: 'Please select an image file',
-      });
-      return;
-    }
-
-    // Reset any previous upload status
-    setUploadStatus({ type: null, message: '' });
-    setSelectedFile(file);
-
-    // Auto-upload the file
-    uploadFile(file);
-  };
 
   const uploadFile = async (file: File) => {
     setIsUploading(true);
@@ -139,6 +63,82 @@ export default function Home() {
       });
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const processFile = useCallback((file: File) => {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setUploadStatus({
+        type: 'error',
+        message: 'Please select an image file',
+      });
+      return;
+    }
+
+    // Reset any previous upload status
+    setUploadStatus({ type: null, message: '' });
+    setSelectedFile(file);
+
+    // Auto-upload the file
+    uploadFile(file);
+  }, []);
+
+  // Global drag detection
+  useEffect(() => {
+    let dragCounter = 0;
+
+    const handleDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounter++;
+      if (e.dataTransfer?.types.includes('Files')) {
+        setShowDragMode(true);
+      }
+    };
+
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounter--;
+      if (dragCounter === 0) {
+        setShowDragMode(false);
+        setIsDragOver(false);
+      }
+    };
+
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+    };
+
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounter = 0;
+      setShowDragMode(false);
+      setIsDragOver(false);
+
+      const files = e.dataTransfer?.files;
+      if (files && files.length > 0) {
+        const file = files[0];
+        processFile(file);
+      }
+    };
+
+    document.addEventListener('dragenter', handleDragEnter);
+    document.addEventListener('dragleave', handleDragLeave);
+    document.addEventListener('dragover', handleDragOver);
+    document.addEventListener('drop', handleDrop);
+
+    return () => {
+      document.removeEventListener('dragenter', handleDragEnter);
+      document.removeEventListener('dragleave', handleDragLeave);
+      document.removeEventListener('dragover', handleDragOver);
+      document.removeEventListener('drop', handleDrop);
+    };
+  }, [processFile]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      processFile(file);
     }
   };
 
@@ -250,10 +250,10 @@ export default function Home() {
                   </svg>
                 </div>
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                  Upload Your Image
+                  Pixel-Pipe
                 </h1>
                 <p className="text-gray-600">
-                  Select an image file to upload to our secure cloud storage
+                  AI-Powered Media Analysis Platform
                 </p>
               </div>
 
