@@ -108,7 +108,11 @@ resource "aws_s3_bucket_cors_configuration" "uploads_cors" {
   cors_rule {
     allowed_headers = ["*"] # Allows any headers to be sent
     allowed_methods = ["PUT", "POST", "GET"] # CRITICAL: We must allow PUT
-    allowed_origins = ["*"] # Allows all origins (localhost, CloudFront, and any other domain)
+    # CRITICAL FIX: Only allow uploads from your known frontends
+    allowed_origins = [
+      "http://localhost:3000", 
+      "https://${aws_cloudfront_distribution.frontend_distribution.domain_name}"
+    ]
     expose_headers  = ["ETag"] # Allows the browser to read the ETag header from the response
     max_age_seconds = 3000 # How long the browser can cache this "permission slip"
   }
@@ -294,9 +298,23 @@ resource "aws_api_gateway_stage" "prod" {
   rest_api_id   = aws_api_gateway_rest_api.main.id
   stage_name    = "prod"
 
+
+
   tags = {
     Name    = "${var.project_name}-api-stage"
     Project = var.project_name
+  }
+}
+
+# API Gateway Method Settings for Rate Limiting
+resource "aws_api_gateway_method_settings" "throttling" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  stage_name  = aws_api_gateway_stage.prod.stage_name
+  method_path = "*/*"
+
+  settings {
+    throttling_burst_limit = 5   # Allow a burst of 5 requests
+    throttling_rate_limit  = 10  # Allow 10 requests per second sustained
   }
 }
 
