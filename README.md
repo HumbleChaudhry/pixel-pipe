@@ -5,3 +5,9 @@ Pixel-Pipe is an architectural showcase of a modern, cloud-native application de
 ## V1 Architecture
 
 ![V1 Architecture](./architecture-v1.png)
+
+## V2 Architecture: The Event-Driven Pipeline
+
+The V2 architecture introduces the core asynchronous processing pipeline. Once an image is uploaded, an S3 event triggers a `dispatch-tasks` Lambda. This function publishes a message to an SNS topic, enabling a "fan-out" pattern for future workers. For now, a single SQS queue subscribes to this topic, holding jobs for the `resize-worker` Lambda. This decouples the initial upload from the processing, creating a resilient and scalable backend system.
+
+![V2 Architecture](./architecture-v2.png)
