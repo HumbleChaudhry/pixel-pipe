@@ -129,3 +129,12 @@ resource "aws_s3_bucket_policy" "frontend_policy" {
     ]
   })
 }
+
+resource "aws_s3_bucket_notification" "uploads_notification" {
+  bucket = aws_s3_bucket.uploads.id
+
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.dispatch_tasks.arn
+    events              = ["s3:ObjectCreated:*"]
+  }
+}

@@ -86,3 +86,18 @@ resource "aws_lambda_function" "resize_worker" {
   runtime          = "nodejs18.x"
   # Add environment variables here as needed later
 }
+
+# --- Lambda Triggers & Permissions ---
+
+resource "aws_lambda_permission" "allow_s3_to_invoke_dispatcher" {
+  statement_id  = "AllowS3Invoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.dispatch_tasks.function_name
+  principal     = "s3.amazonaws.com"
+  source_arn    = aws_s3_bucket.uploads.arn
+}
+
+resource "aws_lambda_event_source_mapping" "resize_worker_trigger" {
+  event_source_arn = aws_sqs_queue.resize_queue.arn
+  function_name    = aws_lambda_function.resize_worker.arn
+}
