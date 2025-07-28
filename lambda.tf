@@ -41,3 +41,48 @@ resource "aws_lambda_function" "get_upload_url" {
     Project = var.project_name
   }
 }
+
+# --- Build/Zip for dispatch-tasks Lambda ---
+resource "null_resource" "build_lambda_dispatch_tasks" {
+  triggers = { source_code_hash = filebase64sha256("${path.module}/src/handlers/dispatch-tasks.ts") }
+  provisioner "local-exec" { command = "npm run build:dispatch-tasks" }
+}
+data "archive_file" "dispatch_tasks_zip" {
+  depends_on  = [null_resource.build_lambda_dispatch_tasks]
+  type        = "zip"
+  source_file = "${path.module}/dist/dispatch-tasks/index.js"
+  output_path = "${path.module}/dispatch-tasks.zip"
+}
+
+# --- Build/Zip for resize-worker Lambda ---
+resource "null_resource" "build_lambda_resize_worker" {
+  triggers = { source_code_hash = filebase64sha256("${path.module}/src/handlers/resize-worker.ts") }
+  provisioner "local-exec" { command = "npm run build:resize-worker" }
+}
+data "archive_file" "resize_worker_zip" {
+  depends_on  = [null_resource.build_lambda_resize_worker]
+  type        = "zip"
+  source_file = "${path.module}/dist/resize-worker/index.js"
+  output_path = "${path.module}/resize-worker.zip"
+}
+
+# --- Lambda Function Definitions ---
+resource "aws_lambda_function" "dispatch_tasks" {
+  function_name    = "${var.project_name}-dispatch-tasks"
+  role             = aws_iam_role.dispatch_tasks_lambda_role.arn
+  filename         = data.archive_file.dispatch_tasks_zip.output_path
+  source_code_hash = data.archive_file.dispatch_tasks_zip.output_base64sha256
+  handler          = "index.handler"
+  runtime          = "nodejs18.x"
+  # Add environment variables here as needed later
+}
+
+resource "aws_lambda_function" "resize_worker" {
+  function_name    = "${var.project_name}-resize-worker"
+  role             = aws_iam_role.resize_worker_lambda_role.arn
+  filename         = data.archive_file.resize_worker_zip.output_path
+  source_code_hash = data.archive_file.resize_worker_zip.output_base64sha256
+  handler          = "index.handler"
+  runtime          = "nodejs18.x"
+  # Add environment variables here as needed later
+}
