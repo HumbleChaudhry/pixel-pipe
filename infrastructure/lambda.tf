@@ -2,7 +2,7 @@
 resource "null_resource" "build_lambda_get_upload_url" {
   triggers = {
     # This tells Terraform to re-run the build if any source file changes
-    source_code_hash = filebase64sha256("${path.module}/src/handlers/get-upload-url.ts")
+    source_code_hash = filebase64sha256("../src/handlers/get-upload-url.ts")
   }
 
   provisioner "local-exec" {
@@ -16,8 +16,8 @@ data "archive_file" "get_upload_url_zip" {
   depends_on = [null_resource.build_lambda_get_upload_url]
   
   type        = "zip"
-  source_file = "${path.module}/dist/get-upload-url/index.js"
-  output_path = "${path.module}/get-upload-url.zip"
+  source_file = "../dist/get-upload-url/index.js"
+  output_path = "../get-upload-url.zip"
 }
 
 # Lambda function
@@ -44,26 +44,26 @@ resource "aws_lambda_function" "get_upload_url" {
 
 # --- Build/Zip for dispatch-tasks Lambda ---
 resource "null_resource" "build_lambda_dispatch_tasks" {
-  triggers = { source_code_hash = filebase64sha256("${path.module}/src/handlers/dispatch-tasks.ts") }
+  triggers = { source_code_hash = filebase64sha256("../src/handlers/dispatch-tasks.ts") }
   provisioner "local-exec" { command = "npm run build:dispatch-tasks" }
 }
 data "archive_file" "dispatch_tasks_zip" {
   depends_on  = [null_resource.build_lambda_dispatch_tasks]
   type        = "zip"
-  source_file = "${path.module}/dist/dispatch-tasks/index.js"
-  output_path = "${path.module}/dispatch-tasks.zip"
+  source_file = "../dist/dispatch-tasks/index.js"
+  output_path = "../dispatch-tasks.zip"
 }
 
 # --- Build/Zip for resize-worker Lambda ---
 resource "null_resource" "build_lambda_resize_worker" {
-  triggers = { source_code_hash = filebase64sha256("${path.module}/src/handlers/resize-worker.ts") }
+  triggers = { source_code_hash = filebase64sha256("../src/handlers/resize-worker.ts") }
   provisioner "local-exec" { command = "npm run build:resize-worker" }
 }
 data "archive_file" "resize_worker_zip" {
   depends_on  = [null_resource.build_lambda_resize_worker]
   type        = "zip"
-  source_file = "${path.module}/dist/resize-worker/index.js"
-  output_path = "${path.module}/resize-worker.zip"
+  source_file = "../dist/resize-worker/index.js"
+  output_path = "../resize-worker.zip"
 }
 
 # --- Lambda Function Definitions ---

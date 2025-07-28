@@ -3,7 +3,9 @@
 *.tfplan
 *.tfplan.*
 .terraform.tfstate.lock.info
+*.tfstate
 *.tfstate.backup
+*.zip
 
 # OS generated files
 .DS_Store
