@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "build:get-upload-url": "esbuild src/handlers/get-upload-url.ts --bundle --platform=node --target=node18 --outfile=dist/get-upload-url/index.js",
-    "build": "npm run build:get-upload-url"
+    "build:dispatch-tasks": "esbuild src/handlers/dispatch-tasks.ts --bundle --platform=node --target=node18 --outfile=dist/dispatch-tasks/index.js",
+    "build:resize-worker": "esbuild src/handlers/resize-worker.ts --bundle --platform=node --target=node18 --outfile=dist/resize-worker/index.js",
+    "build": "npm run build:get-upload-url && npm run build:dispatch-tasks && npm run build:resize-worker"
   },
   "repository": {
     "type": "git",
