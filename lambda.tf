@@ -74,7 +74,12 @@ resource "aws_lambda_function" "dispatch_tasks" {
   source_code_hash = data.archive_file.dispatch_tasks_zip.output_base64sha256
   handler          = "index.handler"
   runtime          = "nodejs18.x"
-  # Add environment variables here as needed later
+  
+  environment {
+    variables = {
+      SNS_TOPIC_ARN = aws_sns_topic.image_events.arn
+    }
+  }
 }
 
 resource "aws_lambda_function" "resize_worker" {
