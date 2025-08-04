@@ -34,7 +34,7 @@ resource "aws_cloudfront_distribution" "frontend_distribution" {
     max_ttl                = 86400
   }
 
-  # Handle client-side routing for Next.js
+
   custom_error_response {
     error_code         = 403
     response_code      = 200

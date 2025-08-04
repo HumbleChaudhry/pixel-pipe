@@ -85,7 +85,7 @@ resource "aws_api_gateway_method_settings" "throttling" {
   method_path = "*/*"
 
   settings {
-    throttling_burst_limit = 5   # Allow a burst of 5 requests
-    throttling_rate_limit  = 10  # Allow 10 requests per second sustained
+    throttling_burst_limit = 5
+    throttling_rate_limit  = 10
   }
 }
