@@ -7,7 +7,7 @@ import {
 import { Readable } from 'stream';
 import sharp from 'sharp';
 
-const s3Client = new S3Client({ region: process.env.AWS_REGION });
+const s3Client = new S3Client({ region: 'ca-central-1' });
 
 async function streamToBuffer(stream: Readable): Promise<Buffer> {
   const chunks: Buffer[] = [];

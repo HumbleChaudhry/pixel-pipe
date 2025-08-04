@@ -57,8 +57,9 @@ resource "null_resource" "build_lambda_resize_worker" {
 data "archive_file" "resize_worker_zip" {
   depends_on  = [null_resource.build_lambda_resize_worker]
   type        = "zip"
-  source_file = "../dist/resize-worker/index.js"
+  source_dir  = "../dist/resize-worker/"
   output_path = "../resize-worker.zip"
+  excludes    = ["node_modules/.bin/*"]
 }
 
 # Lambda functions
@@ -84,9 +85,12 @@ resource "aws_lambda_function" "resize_worker" {
   source_code_hash = data.archive_file.resize_worker_zip.output_base64sha256
   handler          = "index.handler"
   runtime          = "nodejs18.x"
+  timeout          = 60
+  memory_size      = 512
   
   environment {
     variables = {
+      UPLOADS_BUCKET_NAME   = aws_s3_bucket.uploads.bucket
       PROCESSED_BUCKET_NAME = aws_s3_bucket.processed.bucket
     }
   }

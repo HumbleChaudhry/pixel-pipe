@@ -1,5 +1,6 @@
 resource "aws_sqs_queue" "resize_queue" {
-    name = "${var.project_name}-resize-queue"
+    name                       = "${var.project_name}-resize-queue"
+    visibility_timeout_seconds = 120
     tags = {
         Name = "${var.project_name}-resize-queue"
         Project = var.project_name
