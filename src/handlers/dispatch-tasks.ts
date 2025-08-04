@@ -11,7 +11,6 @@ export const handler: S3Handler = async (event: S3Event) => {
     throw new Error('SNS_TOPIC_ARN environment variable is not set');
   }
 
-  // Process each record in the event
   for (const record of event.Records) {
     const bucketName = record.s3.bucket.name;
     const objectKey = decodeURIComponent(
@@ -20,7 +19,6 @@ export const handler: S3Handler = async (event: S3Event) => {
 
     console.log(`Processing object: ${objectKey} from bucket: ${bucketName}`);
 
-    // Create message payload
     const message = {
       bucket: bucketName,
       key: objectKey,
@@ -29,7 +27,6 @@ export const handler: S3Handler = async (event: S3Event) => {
     };
 
     try {
-      // Publish message to SNS
       const command = new PublishCommand({
         TopicArn: snsTopicArn,
         Message: JSON.stringify(message),
