@@ -84,6 +84,12 @@ resource "aws_lambda_function" "resize_worker" {
   source_code_hash = data.archive_file.resize_worker_zip.output_base64sha256
   handler          = "index.handler"
   runtime          = "nodejs18.x"
+  
+  environment {
+    variables = {
+      PROCESSED_BUCKET_NAME = aws_s3_bucket.processed.bucket
+    }
+  }
 }
 
 # Lambda triggers and permissions
