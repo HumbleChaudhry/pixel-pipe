@@ -13,7 +13,7 @@ resource "aws_sns_topic_subscription" "resize_queue_subscription" {
     endpoint = aws_sqs_queue.resize_queue.arn
 }
 
-# --- SQS Queue Policy to allow SNS to send messages ---
+
 resource "aws_sqs_queue_policy" "resize_queue_policy" {
   queue_url = aws_sqs_queue.resize_queue.id
   policy    = jsonencode({
@@ -21,7 +21,7 @@ resource "aws_sqs_queue_policy" "resize_queue_policy" {
     Statement = [
       {
         Effect    = "Allow",
-        Principal = "*", # You can also scope this to the SNS service
+        Principal = "*",
         Action    = "sqs:SendMessage",
         Resource  = aws_sqs_queue.resize_queue.arn,
         Condition = {

@@ -60,7 +60,7 @@ resource "aws_iam_role_policy_attachment" "lambda_policy_attachment" {
   policy_arn = aws_iam_policy.lambda_policy.arn
 }
 
-# --- IAM for dispatch-tasks Lambda ---
+# Dispatch tasks Lambda IAM
 
 resource "aws_iam_role" "dispatch_tasks_lambda_role" {
   name = "${var.project_name}-dispatch-tasks-role"
@@ -98,7 +98,7 @@ resource "aws_iam_role_policy_attachment" "dispatch_tasks_lambda_attach" {
   policy_arn = aws_iam_policy.dispatch_tasks_lambda_policy.arn
 }
 
-# --- IAM for resize-worker Lambda ---
+# Resize worker Lambda IAM
 
 resource "aws_iam_role" "resize_worker_lambda_role" {
   name = "${var.project_name}-resize-worker-role"

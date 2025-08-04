@@ -81,19 +81,18 @@ resource "aws_s3_bucket_cors_configuration" "uploads_cors" {
   bucket = aws_s3_bucket.uploads.id
 
   cors_rule {
-    allowed_headers = ["*"] # Allows any headers to be sent
-    allowed_methods = ["PUT", "POST", "GET"] # CRITICAL: We must allow PUT
-    # CRITICAL FIX: Only allow uploads from your known frontends
+    allowed_headers = ["*"]
+    allowed_methods = ["PUT", "POST", "GET"]
     allowed_origins = [
       "http://localhost:3000", 
       "https://${aws_cloudfront_distribution.frontend_distribution.domain_name}"
     ]
-    expose_headers  = ["ETag"] # Allows the browser to read the ETag header from the response
-    max_age_seconds = 3000 # How long the browser can cache this "permission slip"
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
   }
 }
 
-# --- Frontend Hosting Infrastructure ---
+# Frontend hosting
 
 resource "aws_s3_bucket" "frontend" {
   bucket = "${var.project_name}-frontend-${var.unique_suffix}"

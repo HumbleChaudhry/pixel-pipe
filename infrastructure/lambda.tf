@@ -1,7 +1,5 @@
-# This resource runs the build command for our Lambda
 resource "null_resource" "build_lambda_get_upload_url" {
   triggers = {
-    # This tells Terraform to re-run the build if any source file changes
     source_code_hash = filebase64sha256("../src/handlers/get-upload-url.ts")
   }
 
@@ -10,9 +8,7 @@ resource "null_resource" "build_lambda_get_upload_url" {
   }
 }
 
-# This zips up the OUTPUT of the build command
 data "archive_file" "get_upload_url_zip" {
-  # This depends_on block is CRITICAL. It ensures the build runs BEFORE zipping.
   depends_on = [null_resource.build_lambda_get_upload_url]
   
   type        = "zip"
@@ -20,7 +16,6 @@ data "archive_file" "get_upload_url_zip" {
   output_path = "../get-upload-url.zip"
 }
 
-# Lambda function
 resource "aws_lambda_function" "get_upload_url" {
   filename         = data.archive_file.get_upload_url_zip.output_path
   function_name    = "${var.project_name}-get-upload-url"
@@ -42,7 +37,7 @@ resource "aws_lambda_function" "get_upload_url" {
   }
 }
 
-# --- Build/Zip for dispatch-tasks Lambda ---
+# Dispatch tasks Lambda build
 resource "null_resource" "build_lambda_dispatch_tasks" {
   triggers = { source_code_hash = filebase64sha256("../src/handlers/dispatch-tasks.ts") }
   provisioner "local-exec" { command = "npm run build:dispatch-tasks" }
@@ -54,7 +49,7 @@ data "archive_file" "dispatch_tasks_zip" {
   output_path = "../dispatch-tasks.zip"
 }
 
-# --- Build/Zip for resize-worker Lambda ---
+# Resize worker Lambda build
 resource "null_resource" "build_lambda_resize_worker" {
   triggers = { source_code_hash = filebase64sha256("../src/handlers/resize-worker.ts") }
   provisioner "local-exec" { command = "npm run build:resize-worker" }
@@ -66,7 +61,7 @@ data "archive_file" "resize_worker_zip" {
   output_path = "../resize-worker.zip"
 }
 
-# --- Lambda Function Definitions ---
+# Lambda functions
 resource "aws_lambda_function" "dispatch_tasks" {
   function_name    = "${var.project_name}-dispatch-tasks"
   role             = aws_iam_role.dispatch_tasks_lambda_role.arn
@@ -89,10 +84,9 @@ resource "aws_lambda_function" "resize_worker" {
   source_code_hash = data.archive_file.resize_worker_zip.output_base64sha256
   handler          = "index.handler"
   runtime          = "nodejs18.x"
-  # Add environment variables here as needed later
 }
 
-# --- Lambda Triggers & Permissions ---
+# Lambda triggers and permissions
 
 resource "aws_lambda_permission" "allow_s3_to_invoke_dispatcher" {
   statement_id  = "AllowS3Invoke"
