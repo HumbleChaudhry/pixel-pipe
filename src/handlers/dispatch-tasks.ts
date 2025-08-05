@@ -1,7 +1,11 @@
 import { S3Event, S3Handler } from 'aws-lambda';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 
-const snsClient = new SNSClient({ region: process.env.AWS_REGION });
+const snsClient = new SNSClient({ region: 'ca-central-1' });
+const dynamoClient = new DynamoDBClient({ region: 'ca-central-1' });
+const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
 export const handler: S3Handler = async (event: S3Event) => {
   console.log('Received S3 event:', JSON.stringify(event, null, 2));
@@ -11,7 +15,6 @@ export const handler: S3Handler = async (event: S3Event) => {
     throw new Error('SNS_TOPIC_ARN environment variable is not set');
   }
 
-  // Process each record in the event
   for (const record of event.Records) {
     const bucketName = record.s3.bucket.name;
     const objectKey = decodeURIComponent(
@@ -20,7 +23,6 @@ export const handler: S3Handler = async (event: S3Event) => {
 
     console.log(`Processing object: ${objectKey} from bucket: ${bucketName}`);
 
-    // Create message payload
     const message = {
       bucket: bucketName,
       key: objectKey,
@@ -29,7 +31,6 @@ export const handler: S3Handler = async (event: S3Event) => {
     };
 
     try {
-      // Publish message to SNS
       const command = new PublishCommand({
         TopicArn: snsTopicArn,
         Message: JSON.stringify(message),
@@ -38,8 +39,20 @@ export const handler: S3Handler = async (event: S3Event) => {
 
       const result = await snsClient.send(command);
       console.log(`Message published to SNS: ${result.MessageId}`);
+
+      const putCommand = new PutCommand({
+        TableName: process.env.DYNAMODB_TABLE_NAME,
+        Item: {
+          imageId: objectKey,
+          status: 'PENDING',
+          createdAt: new Date().toISOString(),
+        },
+      });
+
+      await docClient.send(putCommand);
+      console.log(`Created job record for image: ${objectKey}`);
     } catch (error) {
-      console.error('Error publishing to SNS:', error);
+      console.error('Error processing S3 event:', error);
       throw error;
     }
   }

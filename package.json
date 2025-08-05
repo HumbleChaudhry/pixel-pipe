@@ -4,10 +4,11 @@
   "description": "Pixel-Pipe: An AI-Powered Media Analysis Platform built on a serverless, event-driven architecture with AWS and Terraform.",
   "main": "index.js",
   "scripts": {
-    "build:get-upload-url": "esbuild src/handlers/get-upload-url.ts --bundle --platform=node --target=node18 --outfile=dist/get-upload-url/index.js",
-    "build:dispatch-tasks": "esbuild src/handlers/dispatch-tasks.ts --bundle --platform=node --target=node18 --outfile=dist/dispatch-tasks/index.js",
-    "build:resize-worker": "esbuild src/handlers/resize-worker.ts --bundle --platform=node --target=node18 --outfile=dist/resize-worker/index.js",
-    "build": "npm run build:get-upload-url && npm run build:dispatch-tasks && npm run build:resize-worker"
+    "build:get-upload-url": "docker run --rm -v \"%cd%\":/var/task --entrypoint=\"\" public.ecr.aws/lambda/nodejs:18 sh -c \"npm install && npx esbuild src/handlers/get-upload-url.ts --bundle --platform=node --target=node18 --outfile=dist/get-upload-url/index.js\"",
+    "build:dispatch-tasks": "docker run --rm -v \"%cd%\":/var/task --entrypoint=\"\" public.ecr.aws/lambda/nodejs:18 sh -c \"npm install && npx esbuild src/handlers/dispatch-tasks.ts --bundle --platform=node --target=node18 --outfile=dist/dispatch-tasks/index.js\"",
+    "build:resize-worker": "docker run --rm -v \"%cd%\":/var/task --entrypoint=\"\" public.ecr.aws/lambda/nodejs:18 sh -c \"npm install && npx esbuild src/handlers/resize-worker.ts --bundle --platform=node --target=node18 --external:sharp --outfile=dist/resize-worker/index.js && cd dist/resize-worker && printf '{\\\"name\\\":\\\"resize-worker\\\",\\\"version\\\":\\\"1.0.0\\\",\\\"dependencies\\\":{\\\"sharp\\\":\\\"^0.34.3\\\"}}' > package.json && npm install\"",
+    "build:analysis-worker": "docker run --rm -v \"%cd%\":/var/task --entrypoint=\"\" public.ecr.aws/lambda/nodejs:18 sh -c \"npm install && npx esbuild src/handlers/analysis-worker.ts --bundle --platform=node --target=node18 --outfile=dist/analysis-worker/index.js\"",
+    "build": "npm run build:get-upload-url && npm run build:dispatch-tasks && npm run build:resize-worker && npm run build:analysis-worker"
   },
   "repository": {
     "type": "git",
@@ -21,13 +22,18 @@
   },
   "homepage": "https://github.com/HumbleChaudhry/pixel-pipe#readme",
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.859.0",
+    "@aws-sdk/client-rekognition": "^3.859.0",
     "@aws-sdk/client-s3": "^3.844.0",
     "@aws-sdk/client-sns": "^3.844.0",
-    "@aws-sdk/s3-request-presigner": "^3.844.0"
+    "@aws-sdk/lib-dynamodb": "^3.859.0",
+    "@aws-sdk/s3-request-presigner": "^3.844.0",
+    "sharp": "^0.34.3"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.150",
     "@types/node": "^24.0.13",
+    "@types/sharp": "^0.32.0",
     "esbuild": "^0.25.6",
     "typescript": "^5.8.3"
   }

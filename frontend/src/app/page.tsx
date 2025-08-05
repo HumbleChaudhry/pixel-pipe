@@ -17,7 +17,6 @@ export default function Home() {
     setUploadStatus({ type: null, message: '' });
 
     try {
-      // Step 1: Get the presigned upload URL
       const urlResponse = await fetch(
         'https://v2l1qr6b47.execute-api.ca-central-1.amazonaws.com/prod/get-upload-url'
       );
@@ -28,7 +27,6 @@ export default function Home() {
 
       const { uploadURL, key } = await urlResponse.json();
 
-      // Step 2: Upload the file directly to S3
       const uploadResponse = await fetch(uploadURL, {
         method: 'PUT',
         body: file,
@@ -46,7 +44,6 @@ export default function Home() {
         message: `🎉 Successfully uploaded ${file.name}! File key: ${key}`,
       });
 
-      // Clear the file input after successful upload
       setTimeout(() => {
         setSelectedFile(null);
         const fileInput = document.getElementById(
@@ -67,7 +64,6 @@ export default function Home() {
   };
 
   const processFile = useCallback((file: File) => {
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       setUploadStatus({
         type: 'error',
@@ -76,15 +72,11 @@ export default function Home() {
       return;
     }
 
-    // Reset any previous upload status
     setUploadStatus({ type: null, message: '' });
     setSelectedFile(file);
-
-    // Auto-upload the file
     uploadFile(file);
   }, []);
 
-  // Global drag detection
   useEffect(() => {
     let dragCounter = 0;
 
@@ -154,7 +146,6 @@ export default function Home() {
     await uploadFile(selectedFile);
   };
 
-  // Card drag handlers
   const handleCardDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragOver(true);
@@ -187,9 +178,7 @@ export default function Home() {
           onDragOver={showDragMode ? handleCardDragOver : undefined}
           onDragLeave={showDragMode ? handleCardDragLeave : undefined}
         >
-          {/* Dynamic Content Based on Drag Mode */}
           {showDragMode ? (
-            // Drag Mode Content
             <div className="text-center">
               <div
                 className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 transition-all duration-200 ${
@@ -230,9 +219,7 @@ export default function Home() {
               </p>
             </div>
           ) : (
-            // Normal Mode Content
             <>
-              {/* Header */}
               <div className="text-center mb-8">
                 <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg
@@ -257,7 +244,6 @@ export default function Home() {
                 </p>
               </div>
 
-              {/* File Input */}
               <div className="mb-6">
                 <label
                   htmlFor="file-input"
@@ -273,7 +259,6 @@ export default function Home() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                 />
 
-                {/* File Preview */}
                 {selectedFile && (
                   <div className="mt-3 p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
@@ -308,7 +293,6 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Upload Button */}
               <button
                 onClick={handleUpload}
                 disabled={!selectedFile || isUploading}
@@ -328,7 +312,6 @@ export default function Home() {
                 )}
               </button>
 
-              {/* Status Messages */}
               {uploadStatus.message && (
                 <div
                   className={`mt-4 p-3 rounded-lg ${
@@ -349,7 +332,6 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Footer */}
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <p className="text-xs text-gray-500 text-center">
                   Powered by AWS S3 • Secure & Fast Upload

@@ -1,5 +1,6 @@
 resource "aws_sqs_queue" "resize_queue" {
-    name = "${var.project_name}-resize-queue"
+    name                       = "${var.project_name}-resize-queue"
+    visibility_timeout_seconds = 120
     tags = {
         Name = "${var.project_name}-resize-queue"
         Project = var.project_name
@@ -13,7 +14,7 @@ resource "aws_sns_topic_subscription" "resize_queue_subscription" {
     endpoint = aws_sqs_queue.resize_queue.arn
 }
 
-# --- SQS Queue Policy to allow SNS to send messages ---
+
 resource "aws_sqs_queue_policy" "resize_queue_policy" {
   queue_url = aws_sqs_queue.resize_queue.id
   policy    = jsonencode({
@@ -21,9 +22,44 @@ resource "aws_sqs_queue_policy" "resize_queue_policy" {
     Statement = [
       {
         Effect    = "Allow",
-        Principal = "*", # You can also scope this to the SNS service
+        Principal = "*",
         Action    = "sqs:SendMessage",
         Resource  = aws_sqs_queue.resize_queue.arn,
+        Condition = {
+          ArnEquals = {
+            "aws:SourceArn" = aws_sns_topic.image_events.arn
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_sqs_queue" "ai_analysis_queue" {
+    name                       = "${var.project_name}-ai-analysis-queue"
+    visibility_timeout_seconds = 120
+    tags = {
+        Name = "${var.project_name}-ai-analysis-queue"
+        Project = var.project_name
+    }
+}
+
+resource "aws_sns_topic_subscription" "ai_analysis_queue_subscription" {
+    topic_arn = aws_sns_topic.image_events.arn
+    protocol = "sqs"
+    endpoint = aws_sqs_queue.ai_analysis_queue.arn
+}
+
+resource "aws_sqs_queue_policy" "ai_analysis_queue_policy" {
+  queue_url = aws_sqs_queue.ai_analysis_queue.id
+  policy    = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect    = "Allow",
+        Principal = "*",
+        Action    = "sqs:SendMessage",
+        Resource  = aws_sqs_queue.ai_analysis_queue.arn,
         Condition = {
           ArnEquals = {
             "aws:SourceArn" = aws_sns_topic.image_events.arn
