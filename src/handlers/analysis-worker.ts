@@ -16,6 +16,11 @@ export const handler: SQSHandler = async (event) => {
     JSON.stringify(event, null, 2)
   );
 
+  if (!event.Records || !Array.isArray(event.Records)) {
+    console.error('No Records found in event or Records is not an array');
+    return;
+  }
+
   for (const record of event.Records) {
     try {
       const messageBody = JSON.parse(record.body);
