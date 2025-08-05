@@ -192,6 +192,11 @@ resource "aws_iam_policy" "analysis_worker_lambda_policy" {
         Resource = aws_sqs_queue.ai_analysis_queue.arn
       },
       {
+        Action   = "s3:GetObject",
+        Effect   = "Allow",
+        Resource = "${aws_s3_bucket.uploads.arn}/*"
+      },
+      {
         Action   = "rekognition:DetectLabels",
         Effect   = "Allow",
         Resource = "*"
