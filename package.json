@@ -7,7 +7,8 @@
     "build:get-upload-url": "docker run --rm -v \"%cd%\":/var/task --entrypoint=\"\" public.ecr.aws/lambda/nodejs:18 sh -c \"npm install && npx esbuild src/handlers/get-upload-url.ts --bundle --platform=node --target=node18 --outfile=dist/get-upload-url/index.js\"",
     "build:dispatch-tasks": "docker run --rm -v \"%cd%\":/var/task --entrypoint=\"\" public.ecr.aws/lambda/nodejs:18 sh -c \"npm install && npx esbuild src/handlers/dispatch-tasks.ts --bundle --platform=node --target=node18 --outfile=dist/dispatch-tasks/index.js\"",
     "build:resize-worker": "docker run --rm -v \"%cd%\":/var/task --entrypoint=\"\" public.ecr.aws/lambda/nodejs:18 sh -c \"npm install && npx esbuild src/handlers/resize-worker.ts --bundle --platform=node --target=node18 --external:sharp --outfile=dist/resize-worker/index.js && cd dist/resize-worker && printf '{\\\"name\\\":\\\"resize-worker\\\",\\\"version\\\":\\\"1.0.0\\\",\\\"dependencies\\\":{\\\"sharp\\\":\\\"^0.34.3\\\"}}' > package.json && npm install\"",
-    "build": "npm run build:get-upload-url && npm run build:dispatch-tasks && npm run build:resize-worker"
+    "build:analysis-worker": "docker run --rm -v \"%cd%\":/var/task --entrypoint=\"\" public.ecr.aws/lambda/nodejs:18 sh -c \"npm install && npx esbuild src/handlers/analysis-worker.ts --bundle --platform=node --target=node18 --outfile=dist/analysis-worker/index.js\"",
+    "build": "npm run build:get-upload-url && npm run build:dispatch-tasks && npm run build:resize-worker && npm run build:analysis-worker"
   },
   "repository": {
     "type": "git",

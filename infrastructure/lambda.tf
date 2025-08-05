@@ -62,6 +62,18 @@ data "archive_file" "resize_worker_zip" {
   excludes    = ["node_modules/.bin/*"]
 }
 
+# Analysis worker Lambda build
+resource "null_resource" "build_lambda_analysis_worker" {
+  triggers = { source_code_hash = filebase64sha256("../src/handlers/analysis-worker.ts") }
+  provisioner "local-exec" { command = "npm run build:analysis-worker" }
+}
+data "archive_file" "analysis_worker_zip" {
+  depends_on  = [null_resource.build_lambda_analysis_worker]
+  type        = "zip"
+  source_file = "../dist/analysis-worker/index.js"
+  output_path = "../analysis-worker.zip"
+}
+
 # Lambda functions
 resource "aws_lambda_function" "dispatch_tasks" {
   function_name    = "${var.project_name}-dispatch-tasks"
@@ -96,6 +108,24 @@ resource "aws_lambda_function" "resize_worker" {
   }
 }
 
+resource "aws_lambda_function" "analysis_worker" {
+  function_name    = "${var.project_name}-analysis-worker"
+  role             = aws_iam_role.analysis_worker_lambda_role.arn
+  filename         = data.archive_file.analysis_worker_zip.output_path
+  source_code_hash = data.archive_file.analysis_worker_zip.output_base64sha256
+  handler          = "index.handler"
+  runtime          = "nodejs18.x"
+  timeout          = 60
+  memory_size      = 512
+  
+  environment {
+    variables = {
+      UPLOADS_BUCKET_NAME = aws_s3_bucket.uploads.bucket
+      JOBS_TABLE_NAME     = aws_dynamodb_table.jobs_database.name
+    }
+  }
+}
+
 # Lambda triggers and permissions
 
 resource "aws_lambda_permission" "allow_s3_to_invoke_dispatcher" {
@@ -109,4 +139,9 @@ resource "aws_lambda_permission" "allow_s3_to_invoke_dispatcher" {
 resource "aws_lambda_event_source_mapping" "resize_worker_trigger" {
   event_source_arn = aws_sqs_queue.resize_queue.arn
   function_name    = aws_lambda_function.resize_worker.arn
+}
+
+resource "aws_lambda_event_source_mapping" "analysis_worker_trigger" {
+  event_source_arn = aws_sqs_queue.ai_analysis_queue.arn
+  function_name    = aws_lambda_function.analysis_worker.arn
 }
