@@ -81,13 +81,14 @@ export const handler: SQSHandler = async (event) => {
       );
 
       const thumbnailUrl = `s3://${process.env.PROCESSED_BUCKET_NAME}/${thumbnailKey}`;
-      
+
       const updateCommand = new UpdateCommand({
         TableName: process.env.DYNAMODB_TABLE_NAME,
         Key: {
           imageId: key,
         },
-        UpdateExpression: 'SET #status = :status, thumbnailUrl = :thumbnailUrl, updatedAt = :updatedAt',
+        UpdateExpression:
+          'SET #status = :status, thumbnailUrl = :thumbnailUrl, updatedAt = :updatedAt',
         ExpressionAttributeNames: {
           '#status': 'status',
         },
