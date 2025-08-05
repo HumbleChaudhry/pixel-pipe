@@ -88,6 +88,11 @@ resource "aws_iam_policy" "dispatch_tasks_lambda_policy" {
         Action   = "sns:Publish",
         Effect   = "Allow",
         Resource = aws_sns_topic.image_events.arn
+      },
+      {
+        Action   = "dynamodb:PutItem",
+        Effect   = "Allow",
+        Resource = aws_dynamodb_table.jobs_database.arn
       }
     ]
   })
