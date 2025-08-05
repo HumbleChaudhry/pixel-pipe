@@ -202,7 +202,7 @@ resource "aws_iam_policy" "analysis_worker_lambda_policy" {
         Resource = "*"
       },
       {
-        Action   = "dynamodb:UpdateItem",
+        Action   = ["dynamodb:UpdateItem", "dynamodb:PutItem"],
         Effect   = "Allow",
         Resource = aws_dynamodb_table.jobs_database.arn
       }

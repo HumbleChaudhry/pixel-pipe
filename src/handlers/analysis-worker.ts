@@ -4,7 +4,7 @@ import {
   DetectLabelsCommand,
 } from '@aws-sdk/client-rekognition';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 
 const rekognitionClient = new RekognitionClient({ region: 'ca-central-1' });
 const dynamoClient = new DynamoDBClient({ region: 'ca-central-1' });
@@ -55,22 +55,20 @@ export const handler: SQSHandler = async (event) => {
 
       console.log(`Detected ${labels.length} labels:`, labels);
 
-      const updateCommand = new UpdateCommand({
+      const putCommand = new PutCommand({
         TableName: process.env.DYNAMODB_TABLE_NAME,
-        Key: {
+        Item: {
           imageId: key,
-        },
-        UpdateExpression:
-          'SET labels = :labels, analysisStatus = :status, updatedAt = :updatedAt',
-        ExpressionAttributeValues: {
-          ':labels': labels,
-          ':status': 'completed',
-          ':updatedAt': new Date().toISOString(),
+          labels: labels,
+          analysisStatus: 'completed',
+          status: 'PROCESSING',
+          updatedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
         },
       });
 
-      console.log('Updating DynamoDB with analysis results...');
-      await docClient.send(updateCommand);
+      console.log('Saving analysis results to DynamoDB...');
+      await docClient.send(putCommand);
 
       console.log(`Successfully updated job for image: ${key}`);
     } catch (error) {

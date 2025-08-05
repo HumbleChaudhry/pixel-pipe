@@ -92,6 +92,24 @@ resource "aws_s3_bucket_cors_configuration" "uploads_cors" {
   }
 }
 
+# Bucket policy to allow Rekognition access to uploads bucket
+resource "aws_s3_bucket_policy" "uploads_policy" {
+  bucket = aws_s3_bucket.uploads.id
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "rekognition.amazonaws.com"
+        },
+        Action = "s3:GetObject",
+        Resource = "${aws_s3_bucket.uploads.arn}/*"
+      }
+    ]
+  })
+}
+
 # Frontend hosting
 
 resource "aws_s3_bucket" "frontend" {
