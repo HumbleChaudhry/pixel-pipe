@@ -197,7 +197,13 @@ resource "aws_iam_policy" "analysis_worker_lambda_policy" {
         Resource = "${aws_s3_bucket.uploads.arn}/*"
       },
       {
-        Action   = "rekognition:DetectLabels",
+        Action   = [
+          "rekognition:DetectLabels",
+          "rekognition:DetectModerationLabels",
+          "rekognition:DetectFaces",
+          "rekognition:CompareFaces",
+          "rekognition:RecognizeCelebrities"
+        ],
         Effect   = "Allow",
         Resource = "*"
       },
@@ -213,4 +219,9 @@ resource "aws_iam_policy" "analysis_worker_lambda_policy" {
 resource "aws_iam_role_policy_attachment" "analysis_worker_lambda_attach" {
   role       = aws_iam_role.analysis_worker_lambda_role.name
   policy_arn = aws_iam_policy.analysis_worker_lambda_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "analysis_worker_lambda_basic" {
+  role       = aws_iam_role.analysis_worker_lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
