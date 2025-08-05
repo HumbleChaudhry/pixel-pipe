@@ -14,8 +14,8 @@ The V2 architecture introduces the core asynchronous processing pipeline. Once a
 
 ## V3 Architecture: AI Integration & State Management
 
-The V3 architecture completes the core processing pipeline by introducing AI analysis and a persistent data layer. The SNS topic now fans out to a second `ai-analysis-queue`, allowing image resizing and AI analysis to happen in parallel.
+The V3 architecture completes the core processing pipeline by introducing AI analysis and a persistent data layer. The SNS topic now fans out to a second **`ai-analysis-queue`**, allowing image resizing and AI analysis to happen in parallel.
 
-A new `analysis-worker` Lambda consumes from this queue, calling **Amazon Rekognition** to perform object detection. Crucially, a **DynamoDB** table has been introduced as a central state machine. The `dispatch-tasks` Lambda creates an initial record for each job, and each worker Lambda then updates that same record with its results (e.g., thumbnail URL, AI labels), providing a full audit trail for each step of the asynchronous process.
+A new `analysis-worker` Lambda consumes from this queue, calling **Amazon Rekognition** to perform object detection. Crucially, a **DynamoDB** table (`jobs-database`) has been introduced as a central state machine. The `dispatch-tasks` Lambda creates an initial record for each job, and each worker Lambda then updates that same record with its results (e.g., thumbnail URL, AI labels), providing a full audit trail for each step of the asynchronous process.
 
 ![V3 Architecture](./architecture-v3.png)
