@@ -85,7 +85,8 @@ resource "aws_lambda_function" "dispatch_tasks" {
   
   environment {
     variables = {
-      SNS_TOPIC_ARN = aws_sns_topic.image_events.arn
+      SNS_TOPIC_ARN       = aws_sns_topic.image_events.arn
+      DYNAMODB_TABLE_NAME = aws_dynamodb_table.jobs_database.name
     }
   }
 }
@@ -104,6 +105,7 @@ resource "aws_lambda_function" "resize_worker" {
     variables = {
       UPLOADS_BUCKET_NAME   = aws_s3_bucket.uploads.bucket
       PROCESSED_BUCKET_NAME = aws_s3_bucket.processed.bucket
+      DYNAMODB_TABLE_NAME   = aws_dynamodb_table.jobs_database.name
     }
   }
 }
@@ -120,8 +122,9 @@ resource "aws_lambda_function" "analysis_worker" {
   
   environment {
     variables = {
-      UPLOADS_BUCKET_NAME = aws_s3_bucket.uploads.bucket
-      JOBS_TABLE_NAME     = aws_dynamodb_table.jobs_database.name
+      DYNAMODB_TABLE_NAME   = aws_dynamodb_table.jobs_database.name
+      UPLOADS_BUCKET_NAME   = aws_s3_bucket.uploads.bucket
+      PROCESSED_BUCKET_NAME = aws_s3_bucket.processed.bucket
     }
   }
 }
