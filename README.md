@@ -11,3 +11,11 @@ Pixel-Pipe is an architectural showcase of a modern, cloud-native application de
 The V2 architecture introduces the core asynchronous processing pipeline. Once an image is uploaded, an S3 event triggers a `dispatch-tasks` Lambda. This function publishes a message to an SNS topic, enabling a "fan-out" pattern for future workers. For now, a single SQS queue subscribes to this topic, holding jobs for the `resize-worker` Lambda. This decouples the initial upload from the processing, creating a resilient and scalable backend system.
 
 ![V2 Architecture](./architecture-v2.png)
+
+## V3 Architecture: AI Integration & State Management
+
+The V3 architecture completes the core processing pipeline by introducing AI analysis and a persistent data layer. The SNS topic now fans out to a second `ai-analysis-queue`, allowing image resizing and AI analysis to happen in parallel.
+
+A new `analysis-worker` Lambda consumes from this queue, calling **Amazon Rekognition** to perform object detection. Crucially, a **DynamoDB** table has been introduced as a central state machine. The `dispatch-tasks` Lambda creates an initial record for each job, and each worker Lambda then updates that same record with its results (e.g., thumbnail URL, AI labels), providing a full audit trail for each step of the asynchronous process.
+
+![V3 Architecture](./architecture-v3.png)
