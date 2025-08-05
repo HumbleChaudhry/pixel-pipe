@@ -8,7 +8,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { Readable } from 'stream';
 
-const rekognitionClient = new RekognitionClient({ region: 'ca-central-1' });
+const rekognitionClient = new RekognitionClient({ region: 'us-east-1' });
 const s3Client = new S3Client({ region: 'ca-central-1' });
 const dynamoClient = new DynamoDBClient({ region: 'ca-central-1' });
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
