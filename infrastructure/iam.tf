@@ -141,6 +141,11 @@ resource "aws_iam_policy" "resize_worker_lambda_policy" {
         Action   = "s3:PutObject",
         Effect   = "Allow",
         Resource = "${aws_s3_bucket.processed.arn}/*"
+      },
+      {
+        Action   = "dynamodb:UpdateItem",
+        Effect   = "Allow",
+        Resource = aws_dynamodb_table.jobs_database.arn
       }
     ]
   })
