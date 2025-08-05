@@ -4,10 +4,14 @@ import {
   GetObjectCommand,
   PutObjectCommand,
 } from '@aws-sdk/client-s3';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { Readable } from 'stream';
 import sharp from 'sharp';
 
 const s3Client = new S3Client({ region: 'ca-central-1' });
+const dynamoClient = new DynamoDBClient({ region: 'ca-central-1' });
+const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
 async function streamToBuffer(stream: Readable): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -75,6 +79,27 @@ export const handler: SQSHandler = async (event) => {
       console.log(
         `Uploaded thumbnail to s3://${process.env.PROCESSED_BUCKET_NAME}/${thumbnailKey}`
       );
+
+      const thumbnailUrl = `s3://${process.env.PROCESSED_BUCKET_NAME}/${thumbnailKey}`;
+      
+      const updateCommand = new UpdateCommand({
+        TableName: process.env.DYNAMODB_TABLE_NAME,
+        Key: {
+          imageId: key,
+        },
+        UpdateExpression: 'SET #status = :status, thumbnailUrl = :thumbnailUrl, updatedAt = :updatedAt',
+        ExpressionAttributeNames: {
+          '#status': 'status',
+        },
+        ExpressionAttributeValues: {
+          ':status': 'RESIZED',
+          ':thumbnailUrl': thumbnailUrl,
+          ':updatedAt': new Date().toISOString(),
+        },
+      });
+
+      await docClient.send(updateCommand);
+      console.log(`Updated job status to RESIZED for image: ${key}`);
     } catch (error) {
       console.error(`Error processing record:`, error);
       throw error;
