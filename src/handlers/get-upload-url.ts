@@ -11,7 +11,10 @@ const UPLOADS_BUCKET_NAME = process.env.UPLOADS_BUCKET_NAME!;
 
 export const handler: APIGatewayProxyHandlerV2 = async (event) => {
   const requestId = event.requestContext.requestId;
-  logger.info({ requestId, httpMethod: event.requestContext.http.method }, 'Processing upload URL request');
+  logger.info(
+    { requestId, httpMethod: event.requestContext.http.method },
+    'Processing upload URL request'
+  );
 
   const key = `${randomUUID()}.jpeg`;
 
