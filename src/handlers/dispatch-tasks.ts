@@ -24,7 +24,10 @@ export const handler: S3Handler = async (event: S3Event) => {
       record.s3.object.key.replace(/\+/g, ' ')
     );
 
-    logger.info({ objectKey, bucketName, eventName: record.eventName }, 'Processing S3 object');
+    logger.info(
+      { objectKey, bucketName, eventName: record.eventName },
+      'Processing S3 object'
+    );
 
     const message = {
       bucket: bucketName,
@@ -41,7 +44,10 @@ export const handler: S3Handler = async (event: S3Event) => {
       });
 
       const result = await snsClient.send(command);
-      logger.info({ messageId: result.MessageId, objectKey }, 'Published message to SNS');
+      logger.info(
+        { messageId: result.MessageId, objectKey },
+        'Published message to SNS'
+      );
 
       const putCommand = new PutCommand({
         TableName: process.env.DYNAMODB_TABLE_NAME,
@@ -55,7 +61,10 @@ export const handler: S3Handler = async (event: S3Event) => {
       await docClient.send(putCommand);
       logger.info({ imageId: objectKey }, 'Created job record in DynamoDB');
     } catch (error) {
-      logger.error({ error, objectKey, bucketName }, 'Error processing S3 event');
+      logger.error(
+        { error, objectKey, bucketName },
+        'Error processing S3 event'
+      );
       throw error;
     }
   }
