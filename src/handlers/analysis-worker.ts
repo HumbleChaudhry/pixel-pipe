@@ -7,7 +7,9 @@ import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { Readable } from 'stream';
+import pino from 'pino';
 
+const logger = pino();
 const rekognitionClient = new RekognitionClient({ region: 'us-east-1' });
 const s3Client = new S3Client({ region: 'ca-central-1' });
 const dynamoClient = new DynamoDBClient({ region: 'ca-central-1' });
@@ -23,13 +25,10 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
 }
 
 export const handler: SQSHandler = async (event) => {
-  console.log(
-    'Analysis worker received SQS event:',
-    JSON.stringify(event, null, 2)
-  );
+  logger.info({ recordCount: event.Records?.length || 0 }, 'Analysis worker received SQS event');
 
   if (!event.Records || !Array.isArray(event.Records)) {
-    console.error('No Records found in event or Records is not an array');
+    logger.error('No Records found in event or Records is not an array');
     return;
   }
 
@@ -38,12 +37,12 @@ export const handler: SQSHandler = async (event) => {
       const messageBody = JSON.parse(record.body);
       const snsMessage = JSON.parse(messageBody.Message);
 
-      console.log('Extracted SNS message:', snsMessage);
+      logger.info({ snsMessage }, 'Extracted SNS message');
 
       const { bucket, key } = snsMessage;
-      console.log(`Analyzing image: ${bucket}/${key}`);
+      logger.info({ bucket, key }, 'Analyzing image');
 
-      console.log(`Downloading image from S3: s3://${bucket}/${key}`);
+      logger.info({ bucket, key }, 'Downloading image from S3');
       const getObjectCommand = new GetObjectCommand({
         Bucket: bucket,
         Key: key,
@@ -51,13 +50,12 @@ export const handler: SQSHandler = async (event) => {
 
       const s3Response = await s3Client.send(getObjectCommand);
       if (!s3Response.Body) {
+        logger.error({ key }, 'No body returned for S3 object');
         throw new Error(`No body returned for object ${key}`);
       }
 
       const imageBuffer = await streamToBuffer(s3Response.Body as Readable);
-      console.log(
-        `Successfully downloaded image: ${key}, size: ${imageBuffer.length} bytes`
-      );
+      logger.info({ key, imageSize: imageBuffer.length }, 'Successfully downloaded image');
 
       const detectLabelsCommand = new DetectLabelsCommand({
         Image: {
@@ -67,7 +65,7 @@ export const handler: SQSHandler = async (event) => {
         MinConfidence: 75,
       });
 
-      console.log('Calling Rekognition DetectLabels...');
+      logger.info({ key }, 'Calling Rekognition DetectLabels');
       const rekognitionResponse = await rekognitionClient.send(
         detectLabelsCommand
       );
@@ -78,7 +76,7 @@ export const handler: SQSHandler = async (event) => {
           confidence: label.Confidence,
         })) || [];
 
-      console.log(`Detected ${labels.length} labels:`, labels);
+      logger.info({ key, labelCount: labels.length, labels }, 'Detected labels from Rekognition');
 
       const putCommand = new PutCommand({
         TableName: process.env.DYNAMODB_TABLE_NAME,
@@ -92,12 +90,12 @@ export const handler: SQSHandler = async (event) => {
         },
       });
 
-      console.log('Saving analysis results to DynamoDB...');
+      logger.info({ imageId: key }, 'Saving analysis results to DynamoDB');
       await docClient.send(putCommand);
 
-      console.log(`Successfully updated job for image: ${key}`);
+      logger.info({ imageId: key, status: 'PROCESSING', analysisStatus: 'completed' }, 'Successfully updated job');
     } catch (error) {
-      console.error('Error processing record:', error);
+      logger.error({ error }, 'Error processing analysis record');
       throw error;
     }
   }
