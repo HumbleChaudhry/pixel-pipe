@@ -10,9 +10,10 @@ const s3Client = new S3Client({ region: 'ca-central-1' });
 const UPLOADS_BUCKET_NAME = process.env.UPLOADS_BUCKET_NAME!;
 
 export const handler: APIGatewayProxyHandlerV2 = async (event) => {
-  const requestId = event.requestContext.requestId;
+  const requestId = event.requestContext?.requestId || 'unknown';
+  const httpMethod = event.requestContext?.http?.method || 'unknown';
   logger.info(
-    { requestId, httpMethod: event.requestContext.http.method },
+    { requestId, httpMethod },
     'Processing upload URL request'
   );
 
@@ -33,7 +34,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
   return {
     statusCode: 200,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': 'https://d14jet1tdw9j3h.cloudfront.net',
+      'Access-Control-Allow-Headers':
+        'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+      'Access-Control-Allow-Methods': 'GET,OPTIONS',
     },
     body: JSON.stringify({
       uploadURL: url,
