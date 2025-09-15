@@ -5,7 +5,7 @@ import {
 } from '@aws-sdk/client-rekognition';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { Readable } from 'stream';
 import pino from 'pino';
 
@@ -87,23 +87,26 @@ export const handler: SQSHandler = async (event) => {
         'Detected labels from Rekognition'
       );
 
-      const putCommand = new PutCommand({
+      const updateCommand = new UpdateCommand({
         TableName: process.env.DYNAMODB_TABLE_NAME,
-        Item: {
-          imageId: key,
-          labels: labels,
-          analysisStatus: 'completed',
-          status: 'PROCESSING',
-          updatedAt: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
+        Key: { imageId: key },
+        UpdateExpression: 'SET labels = :labels, analysisStatus = :analysisStatus, #status = :status, updatedAt = :updatedAt',
+        ExpressionAttributeNames: {
+          '#status': 'status',
+        },
+        ExpressionAttributeValues: {
+          ':labels': labels,
+          ':analysisStatus': 'completed',
+          ':status': 'COMPLETED',
+          ':updatedAt': new Date().toISOString(),
         },
       });
 
-      logger.info({ imageId: key }, 'Saving analysis results to DynamoDB');
-      await docClient.send(putCommand);
+      logger.info({ imageId: key }, 'Updating analysis results in DynamoDB');
+      await docClient.send(updateCommand);
 
       logger.info(
-        { imageId: key, status: 'PROCESSING', analysisStatus: 'completed' },
+        { imageId: key, status: 'COMPLETED', analysisStatus: 'completed' },
         'Successfully updated job'
       );
     } catch (error) {
