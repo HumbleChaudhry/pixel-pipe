@@ -25,7 +25,10 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
 }
 
 export const handler: SQSHandler = async (event) => {
-  logger.info({ recordCount: event.Records?.length || 0 }, 'Analysis worker received SQS event');
+  logger.info(
+    { recordCount: event.Records?.length || 0 },
+    'Analysis worker received SQS event'
+  );
 
   if (!event.Records || !Array.isArray(event.Records)) {
     logger.error('No Records found in event or Records is not an array');
@@ -55,7 +58,10 @@ export const handler: SQSHandler = async (event) => {
       }
 
       const imageBuffer = await streamToBuffer(s3Response.Body as Readable);
-      logger.info({ key, imageSize: imageBuffer.length }, 'Successfully downloaded image');
+      logger.info(
+        { key, imageSize: imageBuffer.length },
+        'Successfully downloaded image'
+      );
 
       const detectLabelsCommand = new DetectLabelsCommand({
         Image: {
@@ -76,7 +82,10 @@ export const handler: SQSHandler = async (event) => {
           confidence: label.Confidence,
         })) || [];
 
-      logger.info({ key, labelCount: labels.length, labels }, 'Detected labels from Rekognition');
+      logger.info(
+        { key, labelCount: labels.length, labels },
+        'Detected labels from Rekognition'
+      );
 
       const putCommand = new PutCommand({
         TableName: process.env.DYNAMODB_TABLE_NAME,
@@ -93,7 +102,10 @@ export const handler: SQSHandler = async (event) => {
       logger.info({ imageId: key }, 'Saving analysis results to DynamoDB');
       await docClient.send(putCommand);
 
-      logger.info({ imageId: key, status: 'PROCESSING', analysisStatus: 'completed' }, 'Successfully updated job');
+      logger.info(
+        { imageId: key, status: 'PROCESSING', analysisStatus: 'completed' },
+        'Successfully updated job'
+      );
     } catch (error) {
       logger.error({ error }, 'Error processing analysis record');
       throw error;
