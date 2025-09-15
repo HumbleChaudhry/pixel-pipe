@@ -1,1 +1,1 @@
-null
+{"errorType":"TypeError","errorMessage":"Cannot read properties of undefined (reading 'requestId')","trace":["TypeError: Cannot read properties of undefined (reading 'requestId')","    at Runtime.handler (/var/task/index.js:40046:42)","    at Runtime.handleOnceNonStreaming (file:///var/runtime/index.mjs:1206:29)"]}
