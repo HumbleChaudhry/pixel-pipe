@@ -26,7 +26,10 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
 }
 
 export const handler: SQSHandler = async (event) => {
-  logger.info({ recordCount: event.Records.length }, 'Resize worker received SQS event');
+  logger.info(
+    { recordCount: event.Records.length },
+    'Resize worker received SQS event'
+  );
 
   for (const record of event.Records) {
     try {
@@ -54,18 +57,24 @@ export const handler: SQSHandler = async (event) => {
 
       const imageBuffer = await streamToBuffer(response.Body as Readable);
 
-      logger.info({ 
-        key, 
-        imageSize: imageBuffer.length, 
-        contentType: response.ContentType 
-      }, 'Successfully downloaded image');
+      logger.info(
+        {
+          key,
+          imageSize: imageBuffer.length,
+          contentType: response.ContentType,
+        },
+        'Successfully downloaded image'
+      );
 
       const thumbnailBuffer = await sharp(imageBuffer)
         .resize(200, 200)
         .jpeg()
         .toBuffer();
 
-      logger.info({ key, thumbnailSize: thumbnailBuffer.length }, 'Created thumbnail');
+      logger.info(
+        { key, thumbnailSize: thumbnailBuffer.length },
+        'Created thumbnail'
+      );
 
       const thumbnailKey = `thumbnails/${key}`;
 
@@ -78,10 +87,13 @@ export const handler: SQSHandler = async (event) => {
 
       await s3Client.send(putObjectCommand);
 
-      logger.info({ 
-        bucket: process.env.PROCESSED_BUCKET_NAME, 
-        thumbnailKey 
-      }, 'Uploaded thumbnail to S3');
+      logger.info(
+        {
+          bucket: process.env.PROCESSED_BUCKET_NAME,
+          thumbnailKey,
+        },
+        'Uploaded thumbnail to S3'
+      );
 
       const thumbnailUrl = `s3://${process.env.PROCESSED_BUCKET_NAME}/${thumbnailKey}`;
 
@@ -103,7 +115,10 @@ export const handler: SQSHandler = async (event) => {
       });
 
       await docClient.send(updateCommand);
-      logger.info({ imageId: key, status: 'RESIZED' }, 'Updated job status in DynamoDB');
+      logger.info(
+        { imageId: key, status: 'RESIZED' },
+        'Updated job status in DynamoDB'
+      );
     } catch (error) {
       logger.error({ error }, 'Error processing resize record');
       throw error;
