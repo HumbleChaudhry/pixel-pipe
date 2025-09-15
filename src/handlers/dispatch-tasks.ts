@@ -2,16 +2,19 @@ import { S3Event, S3Handler } from 'aws-lambda';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import pino from 'pino';
 
+const logger = pino();
 const snsClient = new SNSClient({ region: 'ca-central-1' });
 const dynamoClient = new DynamoDBClient({ region: 'ca-central-1' });
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
 export const handler: S3Handler = async (event: S3Event) => {
-  console.log('Received S3 event:', JSON.stringify(event, null, 2));
+  logger.info({ recordCount: event.Records.length }, 'Received S3 event');
 
   const snsTopicArn = process.env.SNS_TOPIC_ARN;
   if (!snsTopicArn) {
+    logger.error('SNS_TOPIC_ARN environment variable is not set');
     throw new Error('SNS_TOPIC_ARN environment variable is not set');
   }
 
@@ -21,7 +24,7 @@ export const handler: S3Handler = async (event: S3Event) => {
       record.s3.object.key.replace(/\+/g, ' ')
     );
 
-    console.log(`Processing object: ${objectKey} from bucket: ${bucketName}`);
+    logger.info({ objectKey, bucketName, eventName: record.eventName }, 'Processing S3 object');
 
     const message = {
       bucket: bucketName,
@@ -38,7 +41,7 @@ export const handler: S3Handler = async (event: S3Event) => {
       });
 
       const result = await snsClient.send(command);
-      console.log(`Message published to SNS: ${result.MessageId}`);
+      logger.info({ messageId: result.MessageId, objectKey }, 'Published message to SNS');
 
       const putCommand = new PutCommand({
         TableName: process.env.DYNAMODB_TABLE_NAME,
@@ -50,9 +53,9 @@ export const handler: S3Handler = async (event: S3Event) => {
       });
 
       await docClient.send(putCommand);
-      console.log(`Created job record for image: ${objectKey}`);
+      logger.info({ imageId: objectKey }, 'Created job record in DynamoDB');
     } catch (error) {
-      console.error('Error processing S3 event:', error);
+      logger.error({ error, objectKey, bucketName }, 'Error processing S3 event');
       throw error;
     }
   }
