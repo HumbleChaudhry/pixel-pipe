@@ -8,7 +8,9 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { Readable } from 'stream';
 import sharp from 'sharp';
+import pino from 'pino';
 
+const logger = pino();
 const s3Client = new S3Client({ region: 'ca-central-1' });
 const dynamoClient = new DynamoDBClient({ region: 'ca-central-1' });
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
@@ -24,22 +26,19 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
 }
 
 export const handler: SQSHandler = async (event) => {
-  console.log(
-    'Resize worker received SQS event:',
-    JSON.stringify(event, null, 2)
-  );
+  logger.info({ recordCount: event.Records.length }, 'Resize worker received SQS event');
 
   for (const record of event.Records) {
     try {
       const messageBody = JSON.parse(record.body);
       const snsMessage = JSON.parse(messageBody.Message);
 
-      console.log('Extracted SNS message:', snsMessage);
+      logger.info({ snsMessage }, 'Extracted SNS message');
 
       const { bucket, key } = snsMessage;
-      console.log(`Processing image: ${bucket}/${key}`);
+      logger.info({ bucket, key }, 'Processing image resize');
 
-      console.log(`Downloading image from S3: s3://${bucket}/${key}`);
+      logger.info({ bucket, key }, 'Downloading image from S3');
 
       const getObjectCommand = new GetObjectCommand({
         Bucket: bucket,
@@ -49,21 +48,24 @@ export const handler: SQSHandler = async (event) => {
       const response = await s3Client.send(getObjectCommand);
 
       if (!response.Body) {
+        logger.error({ key }, 'No body returned for S3 object');
         throw new Error(`No body returned for object ${key}`);
       }
 
       const imageBuffer = await streamToBuffer(response.Body as Readable);
 
-      console.log(`Successfully downloaded image: ${key}`);
-      console.log(`Image size: ${imageBuffer.length} bytes`);
-      console.log(`Content type: ${response.ContentType}`);
+      logger.info({ 
+        key, 
+        imageSize: imageBuffer.length, 
+        contentType: response.ContentType 
+      }, 'Successfully downloaded image');
 
       const thumbnailBuffer = await sharp(imageBuffer)
         .resize(200, 200)
         .jpeg()
         .toBuffer();
 
-      console.log(`Created thumbnail: ${thumbnailBuffer.length} bytes`);
+      logger.info({ key, thumbnailSize: thumbnailBuffer.length }, 'Created thumbnail');
 
       const thumbnailKey = `thumbnails/${key}`;
 
@@ -76,9 +78,10 @@ export const handler: SQSHandler = async (event) => {
 
       await s3Client.send(putObjectCommand);
 
-      console.log(
-        `Uploaded thumbnail to s3://${process.env.PROCESSED_BUCKET_NAME}/${thumbnailKey}`
-      );
+      logger.info({ 
+        bucket: process.env.PROCESSED_BUCKET_NAME, 
+        thumbnailKey 
+      }, 'Uploaded thumbnail to S3');
 
       const thumbnailUrl = `s3://${process.env.PROCESSED_BUCKET_NAME}/${thumbnailKey}`;
 
@@ -100,9 +103,9 @@ export const handler: SQSHandler = async (event) => {
       });
 
       await docClient.send(updateCommand);
-      console.log(`Updated job status to RESIZED for image: ${key}`);
+      logger.info({ imageId: key, status: 'RESIZED' }, 'Updated job status in DynamoDB');
     } catch (error) {
-      console.error(`Error processing record:`, error);
+      logger.error({ error }, 'Error processing resize record');
       throw error;
     }
   }
