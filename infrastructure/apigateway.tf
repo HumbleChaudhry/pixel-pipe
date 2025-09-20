@@ -127,6 +127,7 @@ resource "aws_api_gateway_stage" "prod" {
   deployment_id = aws_api_gateway_deployment.main.id
   rest_api_id   = aws_api_gateway_rest_api.main.id
   stage_name    = "prod"
+  xray_tracing_enabled = true
 
   tags = {
     Name    = "${var.project_name}-api-stage"
@@ -145,3 +146,4 @@ resource "aws_api_gateway_method_settings" "throttling" {
     throttling_rate_limit  = 10
   }
 }
+

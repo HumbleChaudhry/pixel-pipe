@@ -25,6 +25,10 @@ resource "aws_lambda_function" "get_upload_url" {
   timeout         = 30
   source_code_hash = data.archive_file.get_upload_url_zip.output_base64sha256
 
+  tracing_config {
+    mode = "Active"
+  }
+
   environment {
     variables = {
       UPLOADS_BUCKET_NAME = aws_s3_bucket.uploads.bucket
@@ -83,6 +87,10 @@ resource "aws_lambda_function" "dispatch_tasks" {
   handler          = "index.handler"
   runtime          = "nodejs18.x"
   
+  tracing_config {
+    mode = "Active"
+  }
+  
   environment {
     variables = {
       SNS_TOPIC_ARN       = aws_sns_topic.image_events.arn
@@ -100,6 +108,10 @@ resource "aws_lambda_function" "resize_worker" {
   runtime          = "nodejs18.x"
   timeout          = 60
   memory_size      = 512
+  
+  tracing_config {
+    mode = "Active"
+  }
   
   environment {
     variables = {
@@ -119,6 +131,10 @@ resource "aws_lambda_function" "analysis_worker" {
   runtime          = "nodejs18.x"
   timeout          = 60
   memory_size      = 512
+  
+  tracing_config {
+    mode = "Active"
+  }
   
   environment {
     variables = {
