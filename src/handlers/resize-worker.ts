@@ -10,15 +10,23 @@ import {
   CloudWatchClient,
   PutMetricDataCommand,
 } from '@aws-sdk/client-cloudwatch';
+import * as AWSXRay from 'aws-xray-sdk';
 import { Readable } from 'stream';
 import sharp from 'sharp';
 import pino from 'pino';
 
 const logger = pino();
-const s3Client = new S3Client({ region: 'ca-central-1' });
-const dynamoClient = new DynamoDBClient({ region: 'ca-central-1' });
+// Wrap the clients with the X-Ray SDK
+const s3Client = AWSXRay.captureAWSv3Client(
+  new S3Client({ region: 'ca-central-1' })
+);
+const dynamoClient = AWSXRay.captureAWSv3Client(
+  new DynamoDBClient({ region: 'ca-central-1' })
+);
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
-const cloudWatchClient = new CloudWatchClient({ region: 'ca-central-1' });
+const cloudWatchClient = AWSXRay.captureAWSv3Client(
+  new CloudWatchClient({ region: 'ca-central-1' })
+);
 
 async function streamToBuffer(stream: Readable): Promise<Buffer> {
   const chunks: Buffer[] = [];

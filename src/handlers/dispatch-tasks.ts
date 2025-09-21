@@ -2,11 +2,17 @@ import { S3Event, S3Handler } from 'aws-lambda';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import * as AWSXRay from 'aws-xray-sdk';
 import pino from 'pino';
 
 const logger = pino();
-const snsClient = new SNSClient({ region: 'ca-central-1' });
-const dynamoClient = new DynamoDBClient({ region: 'ca-central-1' });
+// Wrap the clients with the X-Ray SDK
+const snsClient = AWSXRay.captureAWSv3Client(
+  new SNSClient({ region: 'ca-central-1' })
+);
+const dynamoClient = AWSXRay.captureAWSv3Client(
+  new DynamoDBClient({ region: 'ca-central-1' })
+);
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
 export const handler: S3Handler = async (event: S3Event) => {

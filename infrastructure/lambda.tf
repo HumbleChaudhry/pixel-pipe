@@ -12,8 +12,9 @@ data "archive_file" "get_upload_url_zip" {
   depends_on = [null_resource.build_lambda_get_upload_url]
   
   type        = "zip"
-  source_file = "../dist/get-upload-url/index.js"
+  source_dir  = "../dist/get-upload-url/"
   output_path = "../get-upload-url.zip"
+  excludes    = ["node_modules/.bin/*"]
 }
 
 resource "aws_lambda_function" "get_upload_url" {
@@ -49,8 +50,9 @@ resource "null_resource" "build_lambda_dispatch_tasks" {
 data "archive_file" "dispatch_tasks_zip" {
   depends_on  = [null_resource.build_lambda_dispatch_tasks]
   type        = "zip"
-  source_file = "../dist/dispatch-tasks/index.js"
+  source_dir  = "../dist/dispatch-tasks/"
   output_path = "../dispatch-tasks.zip"
+  excludes    = ["node_modules/.bin/*"]
 }
 
 # Resize worker Lambda build
@@ -74,8 +76,9 @@ resource "null_resource" "build_lambda_analysis_worker" {
 data "archive_file" "analysis_worker_zip" {
   depends_on  = [null_resource.build_lambda_analysis_worker]
   type        = "zip"
-  source_file = "../dist/analysis-worker/index.js"
+  source_dir  = "../dist/analysis-worker/"
   output_path = "../analysis-worker.zip"
+  excludes    = ["node_modules/.bin/*"]
 }
 
 # Lambda functions

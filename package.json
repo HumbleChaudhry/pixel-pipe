@@ -4,10 +4,10 @@
   "description": "Pixel-Pipe: An AI-Powered Media Analysis Platform built on a serverless, event-driven architecture with AWS and Terraform.",
   "main": "index.js",
   "scripts": {
-    "build:get-upload-url": "docker run --rm -v \"%cd%\":/var/task --entrypoint=\"\" public.ecr.aws/lambda/nodejs:18 sh -c \"npm install && npx esbuild src/handlers/get-upload-url.ts --bundle --platform=node --target=node18 --outfile=dist/get-upload-url/index.js\"",
-    "build:dispatch-tasks": "docker run --rm -v \"%cd%\":/var/task --entrypoint=\"\" public.ecr.aws/lambda/nodejs:18 sh -c \"npm install && npx esbuild src/handlers/dispatch-tasks.ts --bundle --platform=node --target=node18 --outfile=dist/dispatch-tasks/index.js\"",
-    "build:resize-worker": "docker run --rm -v \"%cd%\":/var/task --entrypoint=\"\" public.ecr.aws/lambda/nodejs:18 sh -c \"npm install && npx esbuild src/handlers/resize-worker.ts --bundle --platform=node --target=node18 --external:sharp --outfile=dist/resize-worker/index.js && cd dist/resize-worker && printf '{\\\"name\\\":\\\"resize-worker\\\",\\\"version\\\":\\\"1.0.0\\\",\\\"dependencies\\\":{\\\"sharp\\\":\\\"^0.34.3\\\"}}' > package.json && npm install\"",
-    "build:analysis-worker": "docker run --rm -v \"%cd%\":/var/task --entrypoint=\"\" public.ecr.aws/lambda/nodejs:18 sh -c \"npm install && npx esbuild src/handlers/analysis-worker.ts --bundle --platform=node --target=node18 --outfile=dist/analysis-worker/index.js\"",
+    "build:get-upload-url": "docker run --rm -v \"%cd%\":/var/task --entrypoint=\"\" public.ecr.aws/lambda/nodejs:18 sh -c \"npm install && npx esbuild src/handlers/get-upload-url.ts --bundle --platform=node --target=node18 --external:aws-xray-sdk --outfile=dist/get-upload-url/index.js && cd dist/get-upload-url && printf '{\\\"name\\\":\\\"get-upload-url\\\",\\\"version\\\":\\\"1.0.0\\\",\\\"dependencies\\\":{\\\"aws-xray-sdk\\\":\\\"^3.10.3\\\"}}' > package.json && npm install\"",
+    "build:dispatch-tasks": "docker run --rm -v \"%cd%\":/var/task --entrypoint=\"\" public.ecr.aws/lambda/nodejs:18 sh -c \"npm install && npx esbuild src/handlers/dispatch-tasks.ts --bundle --platform=node --target=node18 --external:aws-xray-sdk --outfile=dist/dispatch-tasks/index.js && cd dist/dispatch-tasks && printf '{\\\"name\\\":\\\"dispatch-tasks\\\",\\\"version\\\":\\\"1.0.0\\\",\\\"dependencies\\\":{\\\"aws-xray-sdk\\\":\\\"^3.10.3\\\"}}' > package.json && npm install\"",
+    "build:resize-worker": "docker run --rm -v \"%cd%\":/var/task --entrypoint=\"\" public.ecr.aws/lambda/nodejs:18 sh -c \"npm install && npx esbuild src/handlers/resize-worker.ts --bundle --platform=node --target=node18 --external:sharp --external:aws-xray-sdk --outfile=dist/resize-worker/index.js && cd dist/resize-worker && printf '{\\\"name\\\":\\\"resize-worker\\\",\\\"version\\\":\\\"1.0.0\\\",\\\"dependencies\\\":{\\\"sharp\\\":\\\"^0.34.3\\\",\\\"aws-xray-sdk\\\":\\\"^3.10.3\\\"}}' > package.json && npm install\"",
+    "build:analysis-worker": "docker run --rm -v \"%cd%\":/var/task --entrypoint=\"\" public.ecr.aws/lambda/nodejs:18 sh -c \"npm install && npx esbuild src/handlers/analysis-worker.ts --bundle --platform=node --target=node18 --external:aws-xray-sdk --outfile=dist/analysis-worker/index.js && cd dist/analysis-worker && printf '{\\\"name\\\":\\\"analysis-worker\\\",\\\"version\\\":\\\"1.0.0\\\",\\\"dependencies\\\":{\\\"aws-xray-sdk\\\":\\\"^3.10.3\\\"}}' > package.json && npm install\"",
     "build": "npm run build:get-upload-url && npm run build:dispatch-tasks && npm run build:resize-worker && npm run build:analysis-worker"
   },
   "repository": {
@@ -29,6 +29,7 @@
     "@aws-sdk/client-sns": "^3.844.0",
     "@aws-sdk/lib-dynamodb": "^3.859.0",
     "@aws-sdk/s3-request-presigner": "^3.844.0",
+    "aws-xray-sdk": "^3.10.3",
     "pino": "^9.9.5",
     "sharp": "^0.34.3"
   },

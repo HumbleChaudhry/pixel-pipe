@@ -2,10 +2,14 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 import type { APIGatewayProxyHandlerV2 } from 'aws-lambda';
+import * as AWSXRay from 'aws-xray-sdk';
 import pino from 'pino';
 
 const logger = pino();
-const s3Client = new S3Client({ region: 'ca-central-1' });
+// Wrap the client with the X-Ray SDK
+const s3Client = AWSXRay.captureAWSv3Client(
+  new S3Client({ region: 'ca-central-1' })
+);
 
 const UPLOADS_BUCKET_NAME = process.env.UPLOADS_BUCKET_NAME!;
 
