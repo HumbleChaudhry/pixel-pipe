@@ -14,7 +14,12 @@ data "archive_file" "get_upload_url_zip" {
   type        = "zip"
   source_dir  = "../dist/get-upload-url/"
   output_path = "../get-upload-url.zip"
-  excludes    = ["node_modules/.bin/*"]
+  excludes    = [
+    "node_modules/.bin",
+    "node_modules/*/.bin",
+    "node_modules/*/node_modules/.bin",
+    "node_modules/*/node_modules/*/.bin"
+  ]
 }
 
 resource "aws_lambda_function" "get_upload_url" {
@@ -52,7 +57,12 @@ data "archive_file" "dispatch_tasks_zip" {
   type        = "zip"
   source_dir  = "../dist/dispatch-tasks/"
   output_path = "../dispatch-tasks.zip"
-  excludes    = ["node_modules/.bin/*"]
+  excludes    = [
+    "node_modules/.bin",
+    "node_modules/*/.bin",
+    "node_modules/*/node_modules/.bin",
+    "node_modules/*/node_modules/*/.bin"
+  ]
 }
 
 # Resize worker Lambda build
@@ -65,7 +75,12 @@ data "archive_file" "resize_worker_zip" {
   type        = "zip"
   source_dir  = "../dist/resize-worker/"
   output_path = "../resize-worker.zip"
-  excludes    = ["node_modules/.bin/*"]
+  excludes    = [
+    "node_modules/.bin",
+    "node_modules/*/.bin",
+    "node_modules/*/node_modules/.bin",
+    "node_modules/*/node_modules/*/.bin"
+  ]
 }
 
 # Analysis worker Lambda build
@@ -78,7 +93,12 @@ data "archive_file" "analysis_worker_zip" {
   type        = "zip"
   source_dir  = "../dist/analysis-worker/"
   output_path = "../analysis-worker.zip"
-  excludes    = ["node_modules/.bin/*"]
+  excludes    = [
+    "node_modules/.bin",
+    "node_modules/*/.bin",
+    "node_modules/*/node_modules/.bin",
+    "node_modules/*/node_modules/*/.bin"
+  ]
 }
 
 # Lambda functions
