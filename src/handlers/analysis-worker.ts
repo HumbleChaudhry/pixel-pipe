@@ -6,6 +6,10 @@ import {
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  CloudWatchClient,
+  PutMetricDataCommand,
+} from '@aws-sdk/client-cloudwatch';
 import { Readable } from 'stream';
 import pino from 'pino';
 
@@ -14,6 +18,7 @@ const rekognitionClient = new RekognitionClient({ region: 'us-east-1' });
 const s3Client = new S3Client({ region: 'ca-central-1' });
 const dynamoClient = new DynamoDBClient({ region: 'ca-central-1' });
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
+const cloudWatchClient = new CloudWatchClient({ region: 'ca-central-1' });
 
 async function streamToBuffer(stream: Readable): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -90,7 +95,8 @@ export const handler: SQSHandler = async (event) => {
       const updateCommand = new UpdateCommand({
         TableName: process.env.DYNAMODB_TABLE_NAME,
         Key: { imageId: key },
-        UpdateExpression: 'SET labels = :labels, analysisStatus = :analysisStatus, #status = :status, updatedAt = :updatedAt',
+        UpdateExpression:
+          'SET labels = :labels, analysisStatus = :analysisStatus, #status = :status, updatedAt = :updatedAt',
         ExpressionAttributeNames: {
           '#status': 'status',
         },
@@ -109,8 +115,57 @@ export const handler: SQSHandler = async (event) => {
         { imageId: key, status: 'COMPLETED', analysisStatus: 'completed' },
         'Successfully updated job'
       );
+
+      // Emit success metric to CloudWatch
+      const successMetricCommand = new PutMetricDataCommand({
+        Namespace: 'PixelPipe',
+        MetricData: [
+          {
+            MetricName: 'ImagesProcessed',
+            Value: 1,
+            Unit: 'Count',
+            Dimensions: [
+              {
+                Name: 'WorkerName',
+                Value: 'analysis-worker',
+              },
+            ],
+            Timestamp: new Date(),
+          },
+        ],
+      });
+
+      await cloudWatchClient.send(successMetricCommand);
+      logger.info({ imageId: key }, 'Emitted success metric to CloudWatch');
     } catch (error) {
       logger.error({ error }, 'Error processing analysis record');
+
+      // Emit failure metric to CloudWatch
+      const failureMetricCommand = new PutMetricDataCommand({
+        Namespace: 'PixelPipe',
+        MetricData: [
+          {
+            MetricName: 'ProcessingFailures',
+            Value: 1,
+            Unit: 'Count',
+            Dimensions: [
+              {
+                Name: 'WorkerName',
+                Value: 'analysis-worker',
+              },
+            ],
+            Timestamp: new Date(),
+          },
+        ],
+      });
+
+      try {
+        await cloudWatchClient.send(failureMetricCommand);
+        logger.info('Emitted failure metric to CloudWatch');
+      } catch (metricError) {
+        logger.error({ metricError }, 'Failed to emit failure metric');
+      }
+
       throw error;
     }
   }

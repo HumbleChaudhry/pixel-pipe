@@ -146,6 +146,11 @@ resource "aws_iam_policy" "resize_worker_lambda_policy" {
         Action   = "dynamodb:UpdateItem",
         Effect   = "Allow",
         Resource = aws_dynamodb_table.jobs_database.arn
+      },
+      {
+        Action = "cloudwatch:PutMetricData",
+        Effect = "Allow",
+        Resource = "*"
       }
     ]
   })
@@ -211,6 +216,11 @@ resource "aws_iam_policy" "analysis_worker_lambda_policy" {
         Action   = ["dynamodb:UpdateItem", "dynamodb:PutItem"],
         Effect   = "Allow",
         Resource = aws_dynamodb_table.jobs_database.arn
+      },
+      {
+        Action   = "cloudwatch:PutMetricData",
+        Effect   = "Allow",
+        Resource = "*"
       }
     ]
   })
