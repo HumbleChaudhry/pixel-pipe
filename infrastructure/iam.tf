@@ -60,6 +60,12 @@ resource "aws_iam_role_policy_attachment" "lambda_policy_attachment" {
   policy_arn = aws_iam_policy.lambda_policy.arn
 }
 
+# Attach X-Ray write access to get-upload-url Lambda
+resource "aws_iam_role_policy_attachment" "lambda_xray_attachment" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+}
+
 # Dispatch tasks Lambda IAM
 
 resource "aws_iam_role" "dispatch_tasks_lambda_role" {
@@ -101,6 +107,12 @@ resource "aws_iam_policy" "dispatch_tasks_lambda_policy" {
 resource "aws_iam_role_policy_attachment" "dispatch_tasks_lambda_attach" {
   role       = aws_iam_role.dispatch_tasks_lambda_role.name
   policy_arn = aws_iam_policy.dispatch_tasks_lambda_policy.arn
+}
+
+# Attach X-Ray write access to dispatch-tasks Lambda
+resource "aws_iam_role_policy_attachment" "dispatch_tasks_xray_attachment" {
+  role       = aws_iam_role.dispatch_tasks_lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
 }
 
 # Resize worker Lambda IAM
@@ -146,6 +158,11 @@ resource "aws_iam_policy" "resize_worker_lambda_policy" {
         Action   = "dynamodb:UpdateItem",
         Effect   = "Allow",
         Resource = aws_dynamodb_table.jobs_database.arn
+      },
+      {
+        Action = "cloudwatch:PutMetricData",
+        Effect = "Allow",
+        Resource = "*"
       }
     ]
   })
@@ -160,6 +177,12 @@ resource "aws_iam_role_policy_attachment" "resize_worker_lambda_attach" {
 resource "aws_iam_role_policy_attachment" "resize_worker_lambda_basic" {
   role       = aws_iam_role.resize_worker_lambda_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# Attach X-Ray write access to resize-worker Lambda
+resource "aws_iam_role_policy_attachment" "resize_worker_xray_attachment" {
+  role       = aws_iam_role.resize_worker_lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
 }
 
 # Analysis worker Lambda IAM
@@ -211,6 +234,11 @@ resource "aws_iam_policy" "analysis_worker_lambda_policy" {
         Action   = ["dynamodb:UpdateItem", "dynamodb:PutItem"],
         Effect   = "Allow",
         Resource = aws_dynamodb_table.jobs_database.arn
+      },
+      {
+        Action   = "cloudwatch:PutMetricData",
+        Effect   = "Allow",
+        Resource = "*"
       }
     ]
   })
@@ -224,4 +252,10 @@ resource "aws_iam_role_policy_attachment" "analysis_worker_lambda_attach" {
 resource "aws_iam_role_policy_attachment" "analysis_worker_lambda_basic" {
   role       = aws_iam_role.analysis_worker_lambda_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# Attach X-Ray write access to analysis-worker Lambda
+resource "aws_iam_role_policy_attachment" "analysis_worker_xray_attachment" {
+  role       = aws_iam_role.analysis_worker_lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
 }

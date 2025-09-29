@@ -1,6 +1,18 @@
+resource "aws_sqs_queue" "resize_queue_dlq" {
+    name = "${var.project_name}-resize-queue-dlq"
+    tags = {
+        Name = "${var.project_name}-resize-queue-dlq"
+        Project = var.project_name
+    }
+}
+
 resource "aws_sqs_queue" "resize_queue" {
     name                       = "${var.project_name}-resize-queue"
     visibility_timeout_seconds = 120
+    redrive_policy = jsonencode({
+        deadLetterTargetArn = aws_sqs_queue.resize_queue_dlq.arn
+        maxReceiveCount     = 3
+    })
     tags = {
         Name = "${var.project_name}-resize-queue"
         Project = var.project_name

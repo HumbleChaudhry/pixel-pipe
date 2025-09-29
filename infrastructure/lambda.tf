@@ -12,8 +12,14 @@ data "archive_file" "get_upload_url_zip" {
   depends_on = [null_resource.build_lambda_get_upload_url]
   
   type        = "zip"
-  source_file = "../dist/get-upload-url/index.js"
+  source_dir  = "../dist/get-upload-url/"
   output_path = "../get-upload-url.zip"
+  excludes    = [
+    "node_modules/.bin",
+    "node_modules/*/.bin",
+    "node_modules/*/node_modules/.bin",
+    "node_modules/*/node_modules/*/.bin"
+  ]
 }
 
 resource "aws_lambda_function" "get_upload_url" {
@@ -24,6 +30,10 @@ resource "aws_lambda_function" "get_upload_url" {
   runtime         = "nodejs18.x"
   timeout         = 30
   source_code_hash = data.archive_file.get_upload_url_zip.output_base64sha256
+
+  tracing_config {
+    mode = "Active"
+  }
 
   environment {
     variables = {
@@ -45,8 +55,14 @@ resource "null_resource" "build_lambda_dispatch_tasks" {
 data "archive_file" "dispatch_tasks_zip" {
   depends_on  = [null_resource.build_lambda_dispatch_tasks]
   type        = "zip"
-  source_file = "../dist/dispatch-tasks/index.js"
+  source_dir  = "../dist/dispatch-tasks/"
   output_path = "../dispatch-tasks.zip"
+  excludes    = [
+    "node_modules/.bin",
+    "node_modules/*/.bin",
+    "node_modules/*/node_modules/.bin",
+    "node_modules/*/node_modules/*/.bin"
+  ]
 }
 
 # Resize worker Lambda build
@@ -59,7 +75,12 @@ data "archive_file" "resize_worker_zip" {
   type        = "zip"
   source_dir  = "../dist/resize-worker/"
   output_path = "../resize-worker.zip"
-  excludes    = ["node_modules/.bin/*"]
+  excludes    = [
+    "node_modules/.bin",
+    "node_modules/*/.bin",
+    "node_modules/*/node_modules/.bin",
+    "node_modules/*/node_modules/*/.bin"
+  ]
 }
 
 # Analysis worker Lambda build
@@ -70,8 +91,14 @@ resource "null_resource" "build_lambda_analysis_worker" {
 data "archive_file" "analysis_worker_zip" {
   depends_on  = [null_resource.build_lambda_analysis_worker]
   type        = "zip"
-  source_file = "../dist/analysis-worker/index.js"
+  source_dir  = "../dist/analysis-worker/"
   output_path = "../analysis-worker.zip"
+  excludes    = [
+    "node_modules/.bin",
+    "node_modules/*/.bin",
+    "node_modules/*/node_modules/.bin",
+    "node_modules/*/node_modules/*/.bin"
+  ]
 }
 
 # Lambda functions
@@ -82,6 +109,10 @@ resource "aws_lambda_function" "dispatch_tasks" {
   source_code_hash = data.archive_file.dispatch_tasks_zip.output_base64sha256
   handler          = "index.handler"
   runtime          = "nodejs18.x"
+  
+  tracing_config {
+    mode = "Active"
+  }
   
   environment {
     variables = {
@@ -100,6 +131,10 @@ resource "aws_lambda_function" "resize_worker" {
   runtime          = "nodejs18.x"
   timeout          = 60
   memory_size      = 512
+  
+  tracing_config {
+    mode = "Active"
+  }
   
   environment {
     variables = {
@@ -120,6 +155,10 @@ resource "aws_lambda_function" "analysis_worker" {
   timeout          = 60
   memory_size      = 512
   
+  tracing_config {
+    mode = "Active"
+  }
+  
   environment {
     variables = {
       DYNAMODB_TABLE_NAME   = aws_dynamodb_table.jobs_database.name
@@ -130,6 +169,14 @@ resource "aws_lambda_function" "analysis_worker" {
 }
 
 # Lambda triggers and permissions
+
+resource "aws_lambda_permission" "allow_api_gateway_to_invoke_get_upload_url" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.get_upload_url.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
 
 resource "aws_lambda_permission" "allow_s3_to_invoke_dispatcher" {
   statement_id  = "AllowS3Invoke"
