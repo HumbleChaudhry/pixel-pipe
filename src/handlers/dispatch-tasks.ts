@@ -6,72 +6,137 @@ import * as AWSXRay from 'aws-xray-sdk';
 import pino from 'pino';
 
 const logger = pino();
-// Wrap the clients with the X-Ray SDK
-const snsClient = AWSXRay.captureAWSv3Client(
-  new SNSClient({ region: 'ca-central-1' })
-);
-const dynamoClient = AWSXRay.captureAWSv3Client(
-  new DynamoDBClient({ region: 'ca-central-1' })
-);
+const snsClient = new SNSClient({ region: 'ca-central-1' });
+const dynamoClient = new DynamoDBClient({ region: 'ca-central-1' });
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
 export const handler: S3Handler = async (event: S3Event) => {
-  logger.info({ recordCount: event.Records.length }, 'Received S3 event');
-
-  const snsTopicArn = process.env.SNS_TOPIC_ARN;
-  if (!snsTopicArn) {
-    logger.error('SNS_TOPIC_ARN environment variable is not set');
-    throw new Error('SNS_TOPIC_ARN environment variable is not set');
-  }
-
-  for (const record of event.Records) {
-    const bucketName = record.s3.bucket.name;
-    const objectKey = decodeURIComponent(
-      record.s3.object.key.replace(/\+/g, ' ')
-    );
-
-    logger.info(
-      { objectKey, bucketName, eventName: record.eventName },
-      'Processing S3 object'
-    );
-
-    const message = {
-      bucket: bucketName,
-      key: objectKey,
-      eventName: record.eventName,
-      eventTime: record.eventTime,
-    };
-
+  return AWSXRay.captureAsyncFunc('dispatch-tasks-handler', async (segment) => {
     try {
-      const command = new PublishCommand({
-        TopicArn: snsTopicArn,
-        Message: JSON.stringify(message),
-        Subject: 'Image Upload Event',
-      });
+      logger.info({ recordCount: event.Records.length }, 'Received S3 event');
 
-      const result = await snsClient.send(command);
-      logger.info(
-        { messageId: result.MessageId, objectKey },
-        'Published message to SNS'
-      );
+      const snsTopicArn = process.env.SNS_TOPIC_ARN;
+      if (!snsTopicArn) {
+        const error = new Error(
+          'SNS_TOPIC_ARN environment variable is not set'
+        );
+        segment?.addError(error);
+        logger.error('SNS_TOPIC_ARN environment variable is not set');
+        throw error;
+      }
 
-      const putCommand = new PutCommand({
-        TableName: process.env.DYNAMODB_TABLE_NAME,
-        Item: {
-          imageId: objectKey,
-          status: 'PENDING',
-          createdAt: new Date().toISOString(),
-        },
-      });
+      segment?.addAnnotation('recordCount', event.Records.length);
+      segment?.addAnnotation('snsTopicArn', snsTopicArn);
 
-      await docClient.send(putCommand);
-      logger.info({ imageId: objectKey }, 'Created job record in DynamoDB');
+      for (const record of event.Records) {
+        await AWSXRay.captureAsyncFunc(
+          'process-s3-record',
+          async (recordSegment) => {
+            try {
+              const bucketName = record.s3.bucket.name;
+              const objectKey = decodeURIComponent(
+                record.s3.object.key.replace(/\+/g, ' ')
+              );
+
+              logger.info(
+                { objectKey, bucketName, eventName: record.eventName },
+                'Processing S3 object'
+              );
+
+              recordSegment?.addAnnotation('objectKey', objectKey);
+              recordSegment?.addAnnotation('bucketName', bucketName);
+              recordSegment?.addAnnotation('eventName', record.eventName);
+
+              const message = {
+                bucket: bucketName,
+                key: objectKey,
+                eventName: record.eventName,
+                eventTime: record.eventTime,
+              };
+
+              const messageId = await AWSXRay.captureAsyncFunc(
+                'sns-publish',
+                async (snsSegment) => {
+                  try {
+                    snsSegment?.addAnnotation('operation', 'Publish');
+                    snsSegment?.addAnnotation('topicArn', snsTopicArn);
+                    snsSegment?.addAnnotation('subject', 'Image Upload Event');
+
+                    const command = new PublishCommand({
+                      TopicArn: snsTopicArn,
+                      Message: JSON.stringify(message),
+                      Subject: 'Image Upload Event',
+                    });
+
+                    const result = await snsClient.send(command);
+                    logger.info(
+                      { messageId: result.MessageId, objectKey },
+                      'Published message to SNS'
+                    );
+
+                    snsSegment?.addMetadata('messageId', result.MessageId);
+                    snsSegment?.addMetadata('message', message);
+
+                    return result.MessageId;
+                  } catch (error) {
+                    snsSegment?.addError(error as Error);
+                    throw error;
+                  }
+                }
+              );
+
+              await AWSXRay.captureAsyncFunc(
+                'dynamodb-create-job',
+                async (dbSegment) => {
+                  try {
+                    dbSegment?.addAnnotation('operation', 'PutItem');
+                    dbSegment?.addAnnotation(
+                      'tableName',
+                      process.env.DYNAMODB_TABLE_NAME || 'unknown'
+                    );
+                    dbSegment?.addAnnotation('imageId', objectKey);
+
+                    const putCommand = new PutCommand({
+                      TableName: process.env.DYNAMODB_TABLE_NAME,
+                      Item: {
+                        imageId: objectKey,
+                        status: 'PENDING',
+                        createdAt: new Date().toISOString(),
+                      },
+                    });
+
+                    await docClient.send(putCommand);
+                    logger.info(
+                      { imageId: objectKey },
+                      'Created job record in DynamoDB'
+                    );
+
+                    dbSegment?.addMetadata('status', 'PENDING');
+                    dbSegment?.addMetadata('snsMessageId', messageId);
+                  } catch (error) {
+                    dbSegment?.addError(error as Error);
+                    throw error;
+                  }
+                }
+              );
+            } catch (error) {
+              recordSegment?.addError(error as Error);
+              logger.error(
+                {
+                  error,
+                  objectKey: record.s3.object.key,
+                  bucketName: record.s3.bucket.name,
+                },
+                'Error processing S3 event'
+              );
+              throw error;
+            }
+          }
+        );
+      }
     } catch (error) {
-      logger.error(
-        { error, objectKey, bucketName },
-        'Error processing S3 event'
-      );
+      segment?.addError(error as Error);
       throw error;
     }
-  }
+  });
 };

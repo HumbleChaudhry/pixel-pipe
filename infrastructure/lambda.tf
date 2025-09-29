@@ -170,6 +170,14 @@ resource "aws_lambda_function" "analysis_worker" {
 
 # Lambda triggers and permissions
 
+resource "aws_lambda_permission" "allow_api_gateway_to_invoke_get_upload_url" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.get_upload_url.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
+
 resource "aws_lambda_permission" "allow_s3_to_invoke_dispatcher" {
   statement_id  = "AllowS3Invoke"
   action        = "lambda:InvokeFunction"
