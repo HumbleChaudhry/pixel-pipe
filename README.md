@@ -19,3 +19,9 @@ The V3 architecture completes the core processing pipeline by introducing AI ana
 A new `analysis-worker` Lambda consumes from this queue, calling **Amazon Rekognition** to perform object detection. Crucially, a **DynamoDB** table (`jobs-database`) has been introduced as a central state machine. The `dispatch-tasks` Lambda creates an initial record for each job, and each worker Lambda then updates that same record with its results (e.g., thumbnail URL, AI labels), providing a full audit trail for each step of the asynchronous process.
 
 ![V3 Architecture](./architecture-v3.png)
+
+## V4 Architecture: Observability & Resilience
+
+The V4 architecture makes the system production-ready by adding a full observability and resilience stack. All Lambdas are now instrumented with **AWS X-Ray** for distributed tracing and **Pino** for structured JSON logging. Custom **CloudWatch Metrics** are emitted from workers and visualized on a dashboard. For resilience, a **Dead-Letter Queue (DLQ)** and **CloudWatch Alarms** were implemented to automatically handle and alert on processing failures.
+
+![V4 Architecture](./architecture-v4.png)
