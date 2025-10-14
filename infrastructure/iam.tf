@@ -277,3 +277,31 @@ resource "aws_iam_openid_connect_provider" "github_actions" {
     Project = var.project_name
   }
 }
+
+resource "aws_iam_role" "github_actions_deploy_role" {
+  name = "github-actions-deploy-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.github_actions.arn
+        }
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Condition = {
+          StringEquals = {
+            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+            "token.actions.githubusercontent.com:sub" = "repo:HumbleChaudhry/pixel-pipe:ref:refs/heads/main"
+          }
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name    = "github-actions-deploy-role"
+    Project = var.project_name
+  }
+}
