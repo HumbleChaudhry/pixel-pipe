@@ -305,3 +305,28 @@ resource "aws_iam_role" "github_actions_deploy_role" {
     Project = var.project_name
   }
 }
+
+resource "aws_iam_policy" "github_actions_deploy_policy" {
+  name = "github-actions-deploy-policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "*"
+        Resource = "*"
+      }
+    ]
+  })
+
+  tags = {
+    Name    = "github-actions-deploy-policy"
+    Project = var.project_name
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "github_actions_deploy_policy_attachment" {
+  role       = aws_iam_role.github_actions_deploy_role.name
+  policy_arn = aws_iam_policy.github_actions_deploy_policy.arn
+}
