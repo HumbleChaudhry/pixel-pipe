@@ -278,27 +278,33 @@ resource "aws_iam_openid_connect_provider" "github_actions" {
   }
 }
 
-resource "aws_iam_role" "github_actions_deploy_role" {
-  name = "github-actions-deploy-role"
+data "aws_iam_policy_document" "github_actions_assume_role" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Federated = aws_iam_openid_connect_provider.github_actions.arn
-        }
-        Action = "sts:AssumeRoleWithWebIdentity"
-        Condition = {
-          StringEquals = {
-            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-            "token.actions.githubusercontent.com:sub" = "repo:HumbleChaudhry/pixel-pipe:ref:refs/heads/main"
-          }
-        }
-      }
-    ]
-  })
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github_actions.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = ["repo:HumbleChaudhry/pixel-pipe:*"]
+    }
+  }
+}
+
+resource "aws_iam_role" "github_actions_deploy_role" {
+  name               = "github-actions-deploy-role"
+  assume_role_policy = data.aws_iam_policy_document.github_actions_assume_role.json
 
   tags = {
     Name    = "github-actions-deploy-role"
@@ -306,27 +312,8 @@ resource "aws_iam_role" "github_actions_deploy_role" {
   }
 }
 
-resource "aws_iam_policy" "github_actions_deploy_policy" {
-  name = "github-actions-deploy-policy"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect   = "Allow"
-        Action   = "*"
-        Resource = "*"
-      }
-    ]
-  })
-
-  tags = {
-    Name    = "github-actions-deploy-policy"
-    Project = var.project_name
-  }
-}
-
+# Temporary administrator permissions while bootstrapping the CI/CD pipeline.
 resource "aws_iam_role_policy_attachment" "github_actions_deploy_policy_attachment" {
   role       = aws_iam_role.github_actions_deploy_role.name
-  policy_arn = aws_iam_policy.github_actions_deploy_policy.arn
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
