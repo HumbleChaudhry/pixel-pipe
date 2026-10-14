@@ -259,3 +259,64 @@ resource "aws_iam_role_policy_attachment" "analysis_worker_xray_attachment" {
   role       = aws_iam_role.analysis_worker_lambda_role.name
   policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
 }
+<<<<<<< Updated upstream
+=======
+
+# GitHub Actions OIDC Provider
+resource "aws_iam_openid_connect_provider" "github_actions" {
+  url = "https://token.actions.githubusercontent.com"
+
+  client_id_list = [
+    "sts.amazonaws.com"
+  ]
+
+  thumbprint_list = [
+    "6938fd4d98bab03faadb97b34396831e3780aea1"
+  ]
+
+  tags = {
+    Name    = "${var.project_name}-github-actions-oidc"
+    Project = var.project_name
+  }
+}
+
+data "aws_iam_policy_document" "github_actions_assume_role" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github_actions.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = ["repo:HumbleChaudhry/pixel-pipe:*"]
+    }
+  }
+}
+
+resource "aws_iam_role" "github_actions_deploy_role" {
+  name               = "github-actions-deploy-role"
+  assume_role_policy = data.aws_iam_policy_document.github_actions_assume_role.json
+
+  tags = {
+    Name    = "github-actions-deploy-role"
+    Project = var.project_name
+  }
+}
+
+# Temporary administrator permissions while bootstrapping the CI/CD pipeline.
+resource "aws_iam_role_policy_attachment" "github_actions_deploy_policy_attachment" {
+  role       = aws_iam_role.github_actions_deploy_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}
+>>>>>>> Stashed changes
