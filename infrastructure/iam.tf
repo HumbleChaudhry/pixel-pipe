@@ -259,8 +259,6 @@ resource "aws_iam_role_policy_attachment" "analysis_worker_xray_attachment" {
   role       = aws_iam_role.analysis_worker_lambda_role.name
   policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
 }
-<<<<<<< Updated upstream
-=======
 
 # GitHub Actions OIDC Provider
 resource "aws_iam_openid_connect_provider" "github_actions" {
@@ -319,4 +317,3 @@ resource "aws_iam_role_policy_attachment" "github_actions_deploy_policy_attachme
   role       = aws_iam_role.github_actions_deploy_role.name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
->>>>>>> Stashed changes
