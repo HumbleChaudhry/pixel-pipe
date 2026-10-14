@@ -27,4 +27,42 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ca-central-1
+      - name: Install NPM Dependencies
+        run: npm install
+
+      - name: Build Lambda Functions
+        run: npm run build
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+        working-directory: ./infrastructure
+
+      - name: Terraform Plan
+        if: github.event_name == 'pull_request'
+        id: plan
+        run: terraform plan -no-color
+        working-directory: ./infrastructure
+        continue-on-error: true
+
+      - name: Add Plan to PR Comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const output = `#### Terraform Plan 📖\`\n\`\`\`\n${{ steps.plan.outputs.stdout }}\n\`\`\``;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve
+        working-directory: ./infrastructure
 
